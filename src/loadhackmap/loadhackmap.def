@@ -1,0 +1,3 @@
+LIBRARY	"loadhackmap"
+EXPORTS
+   QueryInterface	@1

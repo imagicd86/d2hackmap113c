@@ -1,0 +1,4 @@
+LIBRARY	"d2hackmap"
+EXPORTS
+  QueryInterface	@1
+	SetReloadFlag @2

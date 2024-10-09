@@ -1,0 +1,74 @@
+下载地址 https://github.com/d2hackmap113c/d2hackmap113c/
+使用说明
+    将map113c目录复制到暗黑安装目录，然后在D2loader的快捷方式添加“ -pdir map113c”参数
+  连接服务器启动参数
+    D:\game\diablo2\D2Loader.exe -locale chi -lq -pdir D:\d2hackmap\map113c -direct -skiptobnet -w
+  单机或TCP启动参数
+    D:\game\diablo2\D2Loader.exe -locale CHI -lq -pdir D:\d2hackmap\map113c -direct -w
+
+编译说明
+  本程序使用Visual Studio 2008编译,系统环境Windows XP(SP3),在网上可找到VS2008 90天试用版,链接指到microsoft.com的比较安全。只需要安装VC，打开src\d2hackmap.sln按F7即可编译。修改编译不需要退出游戏。编译完成后在游戏中按Ctrl+R即可加载新的d2hackmap.dll
+  所有源文件均使用gvim9.0编辑，TAB设置为2
+    set tabstop=2
+    set shiftwidth=2
+  src\loadhackmap.sln编译生成的loadhackmap.dll是用来加载d2hackmap.dll的，这个项目修改编译后需要重新启动游戏。
+
+游戏按键说明
+    本d2hackmap使用左手控制常用按键，将map113c\default.key复制到游戏目录下覆盖原来的default.key，并将save目录下的所有.key文件删除即可使用下面的键盘设置
+    具体设置参考config.txt，每次启动游戏都会生成map113c\runtime\keymap.log，里面列举了所有设置的按键
+	I 人物画面
+	U 任务记录
+	9 技能树
+	V 显示地图
+	技能1-8: Q,E,A,S,D,Z,X,C
+	技能9-16: Y,H,TAB,鼠标侧面前按键,鼠标侧面后按键,鼠标滚轮向上,鼠标滚轮向下,鼠标滚轮按下
+d2hackmap常用按键说明,所有按键均可在map113c/config.txt中修改
+	Ctrl+R 重新加载配置文件,如果d2hackmap.dll已修改则重新加载dll
+	Alt+ENTER 切换全屏窗口模式
+	Control+L 锁定鼠标在当前窗口(仅出城后有效)
+	5	一键回城,如果在传送站上则通过传送站回城
+	6 退出游戏
+	= 下一场游戏
+	\ 镶嵌保护
+	" 血保开关
+	Alt+C 人物画面
+	Alt+Q 任务记录
+	Alt+T 技能树
+	按住R,T,Ctrl+F,G: 屏幕偏移，将人物移到一个角上，可以看到双倍远的距离
+	方向键: 移动小地图
+	Alt+S 一直显示地上的物品
+	Alt+G 显示所有地上的物品
+	J 城外开关
+	K 看别的玩家装备
+	Shift+F: 多开时让其余人物跟随,数量由config.txt中的MultiClientGroupSize1决定
+	Shift+G: 多开时让其余人物跟随,数量由config.txt中的MultiClientGroupSize2决定
+	Shift+T: 多开时让其余人物停止跟随
+	Shift+E: 多开时让其余人物进门
+	按住Alt键或鼠标侧面前按键: 多开时将鼠标左右键点击操作发送给其余窗口执行
+	鼠标滚轮,切换导航目标
+	H 切换窗口在前台时是否自动使用技能
+	Ctrl+Alt+K 切换窗口在后台时是否自动使用技能
+	F键和鼠标侧面后面的键: 按住时自动使用技能,如果右键是传送的话则自动传送到目标地点
+
+多战网设置说明
+  比如有两个战网big.com(大箱子)和small.com(小箱子),客户端有以下4处位置不同data\global\excel\*,data\global\ui\Panel\*,patch_d2.mpq,PlugY.ini,可以把大的几个mpq文件移动到某个目录下比如d:\game\mpq(注意需要在原目录里留一个文件名为d2exp.mpq的空白文件),剩下的文件只有几十兆，复制两份放在d:\game\d2big和d:\game\d2small下分别设置好，然后建立以下两个快捷方式：
+  D:\game\d2big\D2Loader.exe -lq -locale chi -lq -pdir D:\d2hackmap\map113c -direct -skiptobnet -w -mpqpath=d:\game\mpq -bnetip=big.com -d2hackmapcfg=d:\big.txt
+  D:\game\d2small\D2Loader.exe -lq -locale chi -lq -pdir D:\d2hackmap\map113c -direct -skiptobnet -w -mpqpath=d:\game\mpq -bnetip=small.com -d2hackmapcfg=d:\small.txt
+  其中d:\big.txt和d:\small.txt是d2hackmap的设置文件，内容分别是
+  --- d:\big.txt ---
+  Load Config File: "D:\d2hackmap\map113c\config.txt"
+  //Load Config File: "D:\d2hackmap\map113c\config_my.txt"
+  Account[VK_F1]: "bunny1","tuzi"
+  Account[VK_F2]: "bunny2","tuzi"
+  Account[VK_F3]: "bunny3","tuzi"
+  Account[VK_F4]: "bunny4","tuzi"
+  --- d:\small.txt ---
+  Load Config File: "D:\d2hackmap\map113c\config.txt"
+  //Load Config File: "D:\d2hackmap\map113c\config_my.txt"
+  Account[VK_F1]: "bunny1","tuzi"
+  Account[VK_F2]: "bunny2","tuzi"
+  Account[VK_F3]: "bunny3","tuzi"
+  Account[VK_F4]: "bunny4","tuzi"
+  这样不用改文件导入注册表就能同时玩多个战网了。
+
+
