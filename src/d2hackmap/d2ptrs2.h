@@ -33,6 +33,10 @@
 #undef d2mcpclient_ADDR
 //------------ Newly added pointers which will be moved to d2ptrs.h in batch -------------
 
+#define d2common_ADDR 0x6FD50000
+	D2FUNCNAME(d2common,0x6FD80F80,10589,getUnitSize,int,__stdcall,(UnitAny *pUnit))
+#undef d2common_ADDR
+
 #define storm_ADDR 0x6FBF0000
 	D2FUNCNAME(storm,0x6FC1A0B0,266,openMpq,int,__stdcall,(LPCSTR lpFileName,int dwPriority,int dwFlags,void *mpq))
 	D2FUNCNAME(storm,0x6FC2C2B0,422,regQueryValue,int,__stdcall,(char *keyName,char *valueName,int arg,char *buf,int len))

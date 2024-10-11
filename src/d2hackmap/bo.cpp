@@ -66,17 +66,24 @@ void AutoWarCryRunLoop() {
 		case 0: {
 			int needBO=dwCurMs>=renewBoMs,needBC=dwCurMs>=renewBcMs,needShout=0;
 			if (!needBO) {
-				for (RosterUnit *pRU=PLAYERLIST;pRU;pRU=pRU->pNext) {
-					if (dwPlayerPartyId!=pRU->wPartyId) continue;
-					UnitAny *pUnit=d2client_GetUnitFromId(pRU->dwUnitId, UNITNO_PLAYER);if (!pUnit) continue;
-					int bo=d2common_CheckUnitState(pUnit, State_BattleOrders);
-					int shout=d2common_CheckUnitState(pUnit, State_Shout);
-					int bc=d2common_CheckUnitState(pUnit, State_BattleCommand);
-					if (bo&&shout&&bc) continue;
-					if (d2common_IsUnitBlocked(PLAYER,pUnit,4)) continue;
-					if (!bo) {needBO=1;break;}
-					if (shoutLv&&!shout) needShout=1;
-					if (bcLv&&!bc) needBC=1;
+				if (dwPlayerClass!=4) {
+					int bo=d2common_CheckUnitState(PLAYER, State_BattleOrders);
+					int bc=d2common_CheckUnitState(PLAYER, State_BattleCommand);
+					if (!bo) needBO=1;
+					else if (bcLv&&!bc) needBC=1;
+				} else {
+					for (RosterUnit *pRU=PLAYERLIST;pRU;pRU=pRU->pNext) {
+						if (dwPlayerPartyId!=pRU->wPartyId) continue;
+						UnitAny *pUnit=d2client_GetUnitFromId(pRU->dwUnitId, UNITNO_PLAYER);if (!pUnit) continue;
+						int bo=d2common_CheckUnitState(pUnit, State_BattleOrders);
+						int shout=d2common_CheckUnitState(pUnit, State_Shout);
+						int bc=d2common_CheckUnitState(pUnit, State_BattleCommand);
+						if (bo&&shout&&bc) continue;
+						if (d2common_IsUnitBlocked(PLAYER,pUnit,4)) continue;
+						if (!bo) {needBO=1;break;}
+						if (shoutLv&&!shout) needShout=1;
+						if (bcLv&&!bc) needBC=1;
+					}
 				}
 			}
 			if (needBO) {

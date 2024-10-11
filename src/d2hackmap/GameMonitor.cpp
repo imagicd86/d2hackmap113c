@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "bitstream.h"
 #include "d2ptrs.h"
+#include "d2ptrs2.h"
 #include "multi.h"
 #include "auto.h"
 
@@ -97,7 +98,9 @@ static void checkWeapon(UnitAny *pUnit) {
 		case 35:fUsingCrossBow=1;break;
 		case 42:case 43://Throwing
 		case 44:case 87://Javelins
-			fUsingThrow=1;dwThrowWeaponId=pUnit->dwUnitId;throwWeaponIdx=GetItemIndex(pUnit->dwTxtFileNo)+1;break;
+			if (pUnit->pItemData->dwQuality!=ITEM_QUALITY_UNIQUE) {
+				fUsingThrow=1;dwThrowWeaponId=pUnit->dwUnitId;throwWeaponIdx=GetItemIndex(pUnit->dwTxtFileNo)+1;break;
+			}
 	}
 }
 void usePotion(int mana) {
@@ -367,6 +370,13 @@ void DrawMonitorInfo(){
 	wchar_t wszTemp[512];
 	if (tShowTestInfo.isOn) {
 		int pos=wsprintfW(wszTemp, L"(%d,%d)",*d2client_pMouseX,*d2client_pMouseY);
+		int drawX=d2client_GetScreenDrawX()+*d2client_pMouseX;
+		int drawY=d2client_GetScreenDrawY()+*d2client_pMouseY;
+		int unitX=((drawX>>1)+drawY)>>4;
+		int unitY=(drawY-(drawX>>1))>>4;
+		int dis=getDistanceM256(dwPlayerX-unitX,dwPlayerY-unitY);
+		dis=(dis*2/3)>>8;
+		pos+=wsprintfW(wszTemp+pos, L" %dyard",dis);
 		if (0) 
 		pos+=wsprintfW(wszTemp+pos, L" %d,%d,%c",
 			d2common_getSkillStatus(PLAYER,PLAYER->pSkill->pLeftSkill),
@@ -434,8 +444,9 @@ void DrawMonitorInfo(){
 			float dis=getPlayerDistanceYard(pSelectedUnit);
 			int dis10=(int)(dis*10+0.5);
 			pos+=wsprintfW(wszTemp+pos, L" %d.%d yard", dis10/10,dis10%10);
+			pos+=wsprintfW(wszTemp+pos, L" size=%d", d2common_getUnitSize(pSelectedUnit));
 			if (pSelectedUnit->dwUnitType==1) {
-				if (d2common_IsUnitBlocked(PLAYER,pSelectedUnit,2)) pos+=wsprintfW(wszTemp+pos, L" notvisible");
+				//if (d2common_IsUnitBlocked(PLAYER,pSelectedUnit,2)) pos+=wsprintfW(wszTemp+pos, L" notvisible");
 				if (d2common_IsUnitBlocked(PLAYER,pSelectedUnit,4)) {color=1;pos+=wsprintfW(wszTemp+pos, L" unattackable");}
 				MonsterTxt *pMonTxt= pSelectedUnit->pMonsterData->pMonsterTxt;
 				if (pMonTxt->fBoss)

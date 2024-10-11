@@ -1,0 +1,120 @@
+// 6FA8B0A1 - FF 90 84000000        - call dword ptr [eax+00000084]
+void __declspec(naked) DrawCellFile_Patch_ASM() {
+	__asm {
+		cmp fSkipPainting, 0
+		je original
+		xor eax,eax
+		ret 16
+		//original code
+original:
+		jmp dword ptr [eax+0x84]
+	}
+}
+// 6FA8B00C - FF 90 98000000        - call dword ptr [eax+00000098]
+void __declspec(naked) DrawAutomapCell_Patch_ASM() {
+	__asm {
+		cmp fSkipPainting, 0
+		je original
+		xor eax,eax
+		ret 12
+		//original code
+original:
+		jmp dword ptr [eax+0x98]
+	}
+}
+
+//6FB5A94A - 89 3D 14C4BC6F        - mov [6FBCC414],edi { (3) } <--- set to 0
+void __declspec(naked) WaypointMenu1_Patch_ASM() {
+	__asm {
+		pushad
+		mov ecx,edi
+		call setScreenBlockCheck
+		popad
+		ret
+	}
+}
+//6FB5A975 - 89 1D 14C4BC6F        - mov [6FBCC414],ebx { (3) } <--- set to 1
+void __declspec(naked) WaypointMenu2_Patch_ASM() {
+	__asm {
+		pushad
+		mov ecx,ebx
+		call setScreenBlockCheck
+		popad
+		ret
+	}
+}
+	FILETIME create,access;
+	HANDLE hFile=CreateFile(d2hackmap_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile) {GetFileTime(hFile,&create,&access,&d2hackmap_modtime);CloseHandle(hFile);}
+
+
+extern int mouseW,mouseL;
+//return -1:error 1:clicked tab 2:clicked menu
+int takeWaypointToAreaUI(int level) {
+/*
+type=2 (object)
+	waypoint:txt=119,156,157,237,238,288,323,324,398,402,429,496,511
+	blue portal txt=59 
+	red portal txt=60
+	red portal to Act5 txt=566
+expansion tab position: 118+62*[0-4],78
+classic tab position: 124+76*[0-3]
+mouse=112, 137+36*[0-8]
+*/
+	if (!d2client_CheckUiStatus(UIVAR_WAYPOINT)) return -1;
+	int ret=0,act=-1,menuId=-1;
+	for (int i=0;i<5;i++) {
+		for (int j=0;j<9;j++) {
+			if (waypointAreas[i][j]==level) {act=i;menuId=j;break;}
+		}
+	}
+	if (menuId<0) {gameMessage("Waypoint to area %d doesn't exist",level);return -1;}
+	int xpos,ypos;
+	if (*d2client_pWaypointMenuCurTab != act) {
+		if (EXPANSION) xpos=118+62*act;
+		else {
+			xpos=124+76*act;
+			if (act>=4) {gameMessage("Waypoint to area %d doesn't exist",level);return -1;}
+		}
+		ypos=78;
+		ret=1;
+	} else {
+		struct WaypointMenuItem *pitem=NULL;
+		xpos=112;
+		for (int i=0;i< *d2client_pWaypointMenuCount;i++) {
+			struct WaypointMenuItem *p=&d2client_pWaypointMenuItems[i];
+			if (p->areaId==level) {pitem=p;ypos=137+36*i;break;}
+		}
+		if (!pitem) {gameMessage("Waypoint to area %d doesn't match",level);return -1;}
+		if (!pitem->enable) {gameMessage("Waypoint to area %d inactive",level);return -1;}
+		ret=2;
+	}
+	//if (fScreenSaverActive) delayScreenSaver(80);
+	xpos+=(SCREENSIZE.x-800)/2;
+	ypos+=(SCREENSIZE.y-600)/2;
+	int wParam=0;//mouseW;
+	HWND hwnd=d2gfx_GetHwnd();
+	PostMessage(hwnd, WM_MOUSEMOVE, wParam, MAKELONG(xpos, ypos));
+	PostMessage(hwnd, WM_LBUTTONDOWN, wParam, MAKELONG(xpos, ypos));
+	PostMessage(hwnd, WM_LBUTTONUP, wParam, MAKELONG(xpos, ypos));
+	if (fWinActive) PostMessage(hwnd, WM_MOUSEMOVE, wParam, mouseL);
+	return ret;
+}
+
+		case CS_WAIT_WAYPOINT_MENU: {
+			if (!d2client_CheckUiStatus(UIVAR_WAYPOINT)) {
+				if (dwCurMs>followerInteractTimeout) {clickState=0;gameMessage("wait waypoint menu timeout");}
+			} else {
+				clickState=CS_CLICK_WAYPOINT_MENU;
+			}
+			break;
+		}
+		case CS_CLICK_WAYPOINT_MENU: {
+			int ret=takeWaypointToAreaUI(followerWaypointToArea);
+			if (ret==1) {
+				if (dwCurMs>followerInteractTimeout) {clickState=0;gameMessage("click waypoint tab timeout");}
+			} else {
+				clickState=0;
+			}
+			break;
+		}

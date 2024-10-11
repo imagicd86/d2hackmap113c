@@ -251,7 +251,53 @@ void SnapshotEndGame() {
 	}
 	if (tSnapshotEndGame.isOn) dumpInventory();
 }
-static int dumpStat(FILE *fp,Stat *stat) {
+static void dumpStat(FILE *fp,int id,int param,int value) {
+	int unknown=id<0||id>=MAX_NAMES||!propNames[id];
+	if (unknown||debug) {
+		fprintf(fp,"S(%d",id);
+		if (value||param) {
+			fprintf(fp,",%d",value);
+			if (param) {
+				if (param>10000) fprintf(fp,",0x%x)",param);
+				else fprintf(fp,",%d)",param);
+			}
+		}
+		fprintf(fp,")");
+		if (unknown) return;
+	}
+	switch (id) {
+		case 7:
+		case 9:
+		case 11:
+			fprintf(fp,propNames[id],value>>8);break;
+		case 83:fprintf(fp,propNames[id],value,clsSkillNames[param]);break;
+		case 97: 
+		case 107:
+		case 151:
+			fprintf(fp,propNames[id],value,skillNames[param],"");break;
+		case 188:fprintf(fp,propNames[id],value,clsSkills[param>>3][param&3],clsNames[param>>3]);break;
+		case 195:
+		case 196:
+		case 197:
+		case 198:
+		case 199:
+		case 201:
+			fprintf(fp,propNames[id],value,param&0x3f,skillNames[param>>6]);break;
+		case 204:
+			fprintf(fp,propNames[id],param&0x3f,skillNames[param>>6],value&0xFF,value>>8);
+			break;
+		case 216:case 217:
+			fprintf(fp,propNames[id],value/2048.0f,param);break;
+			break;
+		default:
+			if (214<=id&&id<=250) {
+				fprintf(fp,propNames[id],value/8.0f,param);break;
+			} else {
+				fprintf(fp,propNames[id],value,param);break;
+			}
+	}
+}
+static int dumpStats(FILE *fp,Stat *stat) {
 	if (!stat||!stat->pStats) return 0;
 	int sockets=0,fr=0,cr=0,pr=0,lr=0;
 	int n=stat->wStats;if (n>511) return 0;
@@ -264,21 +310,8 @@ static int dumpStat(FILE *fp,Stat *stat) {
 		if (id<last) return 0; //invalid list
 		last=id;
 		int value=se[i].dwStatValue;
-		int value2=se[i].wParam&0xFFFF;
+		int param=se[i].wParam&0xFFFF;
 		fputc(' ',fp);
-		int unknown=id<0||id>=MAX_NAMES||!propNames[id];
-		if (unknown||debug) {
-			fprintf(fp,"S(%d",id);
-			if (value||value2) {
-				fprintf(fp,",%d",value);
-				if (value2) {
-					if (value2>10000) fprintf(fp,",0x%x)",value2);
-					else fprintf(fp,",%d)",value2);
-				}
-			}
-			fprintf(fp,")");
-			if (unknown) continue;
-		}
 		switch (id) {
 			case 6:
 			case 8:
@@ -288,44 +321,17 @@ static int dumpStat(FILE *fp,Stat *stat) {
 					i++;
 				}
 				break;
-			case 7:
-			case 9:
-			case 11:
-				fprintf(fp,propNames[id],value>>8);break;
 			case 39:fr+=value;break;
 			case 41:lr+=value;break;
 			case 43:cr+=value;break;
 			case 45:pr+=value;break;
-			case 83:fprintf(fp,propNames[id],value,clsSkillNames[value2]);break;
-			case 97: 
-			case 107:
-			case 151:
-				fprintf(fp,propNames[id],value,skillNames[value2],"");break;
-			case 188:fprintf(fp,propNames[id],value,clsSkills[value2>>3][value2&3],clsNames[value2>>3]);break;
 			case 194:
 				sockets=value;
 				fprintf(fp," 有%d孔",value);
 				//if (debug) fprintf(fp," %x",&se[i].dwStatValue);
 				break;
-			case 195:
-			case 196:
-			case 197:
-			case 198:
-			case 199:
-			case 201:
-				fprintf(fp,propNames[id],value,value2&0x3f,skillNames[value2>>6]);break;
-			case 204:
-				fprintf(fp,propNames[id],value2&0x3f,skillNames[value2>>6],value&0xFF,value>>8);
-				break;
-			case 216:case 217:
-				fprintf(fp,propNames[id],value/2048.0f,value2);break;
-				break;
 			default:
-				if (214<=id&&id<=250) {
-					fprintf(fp,propNames[id],value/8.0f,value2);break;
-				} else {
-					fprintf(fp,propNames[id],value,value2);break;
-				}
+				dumpStat(fp,id,param,value);
 		}
 	}
 	if (fr&&fr==lr&&fr==cr&&fr==pr) {
@@ -407,16 +413,16 @@ int dumpStatList(FILE *fp,StatList *plist,int dumpBaseStat) {
 		fprintf(fp," prev=%x next=%x",plist->pPrevList,plist->pNextLis);
 		fprintf(fp,"\n");
 		if (plist->sBaseStat.pStats) {
-			fprintf(fp,"  BaseStat:");nsockets=dumpStat(fp,&plist->sBaseStat);
+			fprintf(fp,"  BaseStat:");nsockets=dumpStats(fp,&plist->sBaseStat);
 			fprintf(fp,"\n");
 		}
 		if (plist->dwListFlag&0x80000000) {
 			if (plist->sModStat.pStats) {
-				fprintf(fp,"  ModStat:");dumpStat(fp,&plist->sModStat);
+				fprintf(fp,"  ModStat:");dumpStats(fp,&plist->sModStat);
 				fprintf(fp,"\n");
 			}
 			if (plist->sFullStat.pStats) {
-				fprintf(fp,"  FullStat:");nsockets=dumpStat(fp,&plist->sFullStat);
+				fprintf(fp,"  FullStat:");nsockets=dumpStats(fp,&plist->sFullStat);
 				fprintf(fp,"\n");
 			}
 		}
@@ -424,18 +430,18 @@ int dumpStatList(FILE *fp,StatList *plist,int dumpBaseStat) {
 		if (plist->dwListFlag&0x80000000) {
 			if (dumpBaseStat) {
 				if (plist->sBaseStat.pStats) {
-					fprintf(fp,"  BaseStat:");dumpStat(fp,&plist->sBaseStat);
+					fprintf(fp,"  BaseStat:");dumpStats(fp,&plist->sBaseStat);
 					fprintf(fp,"\n");
 				}
 				if (plist->sFullStat.pStats) {
-					fprintf(fp,"  FullStat:");nsockets=dumpStat(fp,&plist->sFullStat);
+					fprintf(fp,"  FullStat:");nsockets=dumpStats(fp,&plist->sFullStat);
 					fprintf(fp,"\n");
 				}
 			} else {
-				nsockets=dumpStat(fp,&plist->sFullStat);
+				nsockets=dumpStats(fp,&plist->sFullStat);
 			}
 		} else {
-			nsockets=dumpStat(fp,&plist->sBaseStat);
+			nsockets=dumpStats(fp,&plist->sBaseStat);
 		}
 	}
 	return nsockets;
@@ -1169,8 +1175,15 @@ void dumpMap() {
 	fprintf(fp,"player=(%d,%d) level=%d\n",px,py,pDrlgLevel->dwLevelNo);
 	AreaRectData *pData = PLAYER->pMonPath->pAreaRectData;
 	AreaRectInfo *pInfo = pData->pAreaRectInfo;
-	fprintf(fp," unit(%d,%d,%d,%d) tile(%d,%d,%d,%d)",pData->unitX,pData->unitY,pData->unitW,pData->unitH,
+	fprintf(fp,"CurrentRect: unit(%d,%d,%d,%d) tile(%d,%d,%d,%d)",pData->unitX,pData->unitY,pData->unitW,pData->unitH,
 		pData->tileX,pData->tileY,pData->tileW,pData->tileH);
+	fprintf(fp,"present units:");
+	for (PresetUnit *pUnit=pInfo->pPresetUnits;pUnit;pUnit=pUnit->pNext) {
+		ObjectTxt *pObj = d2common_GetObjectTxt(pUnit->dwTxtFileNo);
+		fprintf(fp,"\t%d:%d(%d,%d) map=%d\n",pUnit->dwUnitType,pUnit->dwTxtFileNo,
+			pUnit->unitDx,pUnit->unitDy,pObj->nAutoMap);
+	}
+	fputc('\n',fp);
 	fprintf(fp," Info(%d,%d,%d,%d)\n",pInfo->tileX,pInfo->tileY,pInfo->tileW,pInfo->tileH);
 	AreaRectData *pAreaRectData = PLAYER->pMonPath->pAreaRectData;
 	for (int i=0;i<pAreaRectData->nearbyRectCount;i++) {
@@ -1205,6 +1218,7 @@ void dumpMap() {
 		//bit2: attack block
 		//bit4: waypoint
 		//bit5: tree
+		//bit6: poison?
 		//bit7: around player
 		//bit8: around monster
 		//bit10: object
@@ -1235,6 +1249,43 @@ void dumpMap() {
 		hex(fp,(int)gp,gp,0x30);
 	}
 	*/
+	fclose(fp);
+}
+void dumpTxt() {
+	FILE *fp=openDbgFile("_uniqueTxt.txt");if (!fp) return;
+	int ptable=*d2common_pDataTables;
+	int nUnique=*(int *)(ptable+0xC28);
+	UniqueItemTxt *pu=(UniqueItemTxt *)*(int *)(ptable+0xC24);
+	for (int i=0;i<nUnique;i++,pu++) {
+		char code[5];memcpy(code,pu->szCode,4);code[4]=0;
+		fprintf(fp," %d:%s",pu->dwIndex,pu->szDesc);
+		if (uniqueNames[pu->dwIndex]) fprintf(fp," %s",uniqueNames[pu->dwIndex]);
+		fprintf(fp," %s",code);
+		fprintf(fp," qLvl=%d reqLvl=%d",pu->wQlvl,pu->wReqlvl);
+		fprintf(fp," cost=(*%d+%d)",pu->dwCostMult,pu->dwCostAdd);
+		for (int i=0;i<12;i++) {
+			ItemProp *p=&pu->Prop[i];
+			if (p->PropId==-1) break;
+			fputc(' ',fp);
+			switch (p->PropId) {
+				case 41:fprintf(fp,"所有抗性+(%d-%d)",p->MinVal,p->MaxVal);break;
+				default:
+					PropertiesTxt *pPropertiesTxt = d2common_GetPropertiesTxt(p->PropId);
+					if ( !pPropertiesTxt ) continue;
+					fprintf(fp," P%d",p->PropId);
+					short *pStatNo = pPropertiesTxt->wStatNo;
+					for (int i=0;i<7;i++) {
+						short statId=*pStatNo++;if (statId<0) break;
+						fputc(' ',fp);
+						dumpStat(fp,statId,p->Param,p->MinVal);
+						if (p->MinVal!=p->MaxVal) fprintf(fp,"(%d-%d)",p->MinVal,p->MaxVal);
+					}
+					break;
+			}
+		}
+		fputc('\n',fp);
+		fflush(fp);
+	}
 	fclose(fp);
 }
 int DoSnapshot() {
@@ -1277,6 +1328,7 @@ int DoSnapshot() {
 	}
 	dumpMinimap();
 	dumpMap();
+	dumpTxt();
 	fp=openDbgFile("_self.txt");
 	if (fp) {
 		dumpUnit2(fp,PLAYER);

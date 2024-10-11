@@ -6,8 +6,8 @@ BYTE GetItemColour(UnitAny *pItem,int arridx);
 void AutoMapRoute();
 void AutoRouteDrawMinimapPath();
 int AddRectToMinimap(AreaRectInfo *pAreaRectInfo,int revealed);
-int PrevLevelTarget();
-int NextLevelTarget();
+int PrevMapTarget();
+int NextMapTarget();
 int isWaypointTxt(int txt);
 
 #define MINIMAP_TYPE (*d2client_pMinimapType)
@@ -30,8 +30,8 @@ int dwAutoRevealCLevel=0;
 int dwRescueBarDx,dwRescueBarDy;
 ToggleVar tRevealAct={TOGGLEVAR_DOWN,0,-1,1,"RevealAutomap",&RevealCurAct};
 ToggleVar tRevealLevel={TOGGLEVAR_DOWN,0,-1,1,"RevealLevel",&RevealLevelPlayerIn};
-ToggleVar tPrevLevelTarget={TOGGLEVAR_DOWN,0,-1,1,"PrevLevelTarget",&PrevLevelTarget};
-ToggleVar tNextLevelTarget={TOGGLEVAR_DOWN,0,-1,1,"NextLevelTarget",&NextLevelTarget};
+ToggleVar tPrevMapTarget={TOGGLEVAR_DOWN,0,-1,1,"PrevMapTarget",&PrevMapTarget};
+ToggleVar tNextMapTarget={TOGGLEVAR_DOWN,0,-1,1,"NextMapTarget",&NextMapTarget};
 ToggleVar tAutomapLevelNames={TOGGLEVAR_ONOFF,0,-1,1,"Automap Level Names Toggle" };
 ToggleVar tAutoMap={TOGGLEVAR_ONOFF,1,-1,1,"Auto Map Toggle"};
 BYTE anMonsterColours[1000]={0};
@@ -102,8 +102,8 @@ int 			dwMiniMapScrollOffset[16][2]={ 0};
 static ConfigVar aConfigVars[] = {
 	{CONFIG_VAR_TYPE_KEY, "RevealActAutomapKey",      &tRevealAct       },
 	{CONFIG_VAR_TYPE_KEY, "RevealLevelAutomapKey",    &tRevealLevel     },
-	{CONFIG_VAR_TYPE_KEY, "PrevLevelTarget",    &tPrevLevelTarget     },
-	{CONFIG_VAR_TYPE_KEY, "NextLevelTarget",    &tNextLevelTarget     },
+	{CONFIG_VAR_TYPE_KEY, "PrevMapTarget",    &tPrevMapTarget     },
+	{CONFIG_VAR_TYPE_KEY, "NextMapTarget",    &tNextMapTarget     },
 	{CONFIG_VAR_TYPE_INT,"RouteLineColor",&routeLineColor,1}, 
 	{CONFIG_VAR_TYPE_KEY, "AutoMapToggle",            &tAutoMap         },
 	{CONFIG_VAR_TYPE_INT, "AutoRevealMode",            &dwAutoRevealMode   ,  4 },
@@ -320,7 +320,7 @@ static void updateTargetName() {
 	}
 	int pos=0;
 	if (pCurMapLevel->n>1) {
-		wchar_t keyName[32];formatKeyW(keyName,tNextLevelTarget.key);
+		wchar_t keyName[32];formatKeyW(keyName,tNextMapTarget.key);
 		pos+=wsprintfW(wcsLevelTargetName+pos, L"%d/%d %cc7%s%cc%c ",pCurMapLevel->cur+1,pCurMapLevel->n,
 			255,keyName,255,'0'+targetNameColor);
 	}
@@ -357,7 +357,7 @@ void AutoMapNewLevel() {
 		}
 	}
 }
-int PrevLevelTarget() {
+int PrevMapTarget() {
 	if (!pCurMapLevel||!pCurMapLevel->targets) return 0;
 	int n=0;
 	for (MinimapLevelTarget *pTarget=pCurMapLevel->targets;pTarget;pTarget=pTarget->next) {
@@ -371,7 +371,7 @@ int PrevLevelTarget() {
 	}
 	return 1;
 }
-int NextLevelTarget() {
+int NextMapTarget() {
 	if (!pCurMapLevel||!pCurMapLevel->curTarget) return 0;
 	if (pCurMapLevel->curTarget->next) {pCurMapLevel->curTarget=pCurMapLevel->curTarget->next;pCurMapLevel->cur++;}
 	else {pCurMapLevel->curTarget=pCurMapLevel->targets;pCurMapLevel->cur=0;}
@@ -390,20 +390,20 @@ void addMinimapTarget(AreaRectInfo *pInfo,int srcLvl,int dstLvl,int unitX,int un
 	MinimapLevel *pMapLevel=&minimapLevels[srcLvl];
 	for (MinimapLevelTarget *pTarget=pMapLevel->targets;pTarget;pTarget=pTarget->next) {
 		if(pTarget->dstLvl==dstLvl) {
-			pTarget->ready=1;pTarget->drawX=drawX;pTarget->drawY=drawY;
-			pTarget->unitX=unitX;pTarget->unitY=unitY;pTarget->unitType=unitType;pTarget->unitTxt=unitTxt;
-			pTarget->tileX=pInfo->tileX;pTarget->tileY=pInfo->tileY;
+			pTarget->ready=1;pTarget->p.drawX=drawX;pTarget->p.drawY=drawY;
+			pTarget->p.unitX=unitX;pTarget->p.unitY=unitY;pTarget->p.unitType=unitType;pTarget->p.unitTxt=unitTxt;
+			pTarget->p.rectTileX=pInfo->tileX;pTarget->p.rectTileY=pInfo->tileY;
 			pTarget->dstRect=NULL;pTarget->dstTile=NULL;added=1;
 		}
 	}
 }
-static void target_swap(MinimapLevelTarget **ppt) {
+static void target_sort(MinimapLevelTarget **ppt) {
 	MinimapLevelTarget *pT=*ppt;if (!pT) return;
 	MinimapLevelTarget *next=pT->next;if (!next) return;
 	if (pT->dstLvl<3000||next->dstLvl<3000) return;
 	if (!pT->ready||!next->ready) return;
-	int dis1=getDistanceM256(dwPlayerX-pT->unitX,dwPlayerY-pT->unitY);
-	int dis2=getDistanceM256(dwPlayerX-next->unitX,dwPlayerY-next->unitY);
+	int dis1=getDistanceM256(dwPlayerX-pT->p.unitX,dwPlayerY-pT->p.unitY);
+	int dis2=getDistanceM256(dwPlayerX-next->p.unitX,dwPlayerY-next->p.unitY);
 	if (dis1>dis2) {
 		pT->next=next->next;next->next=pT;*ppt=pT;
 	}
@@ -411,10 +411,10 @@ static void target_swap(MinimapLevelTarget **ppt) {
 static void modifyRescueBarTarget() {
 	MinimapLevel *pMapLevel=&minimapLevels[Level_FrigidHighlands];
 	if (!pMapLevel->targets) return;
-	target_swap(&pMapLevel->targets);
+	target_sort(&pMapLevel->targets);
 	if (pMapLevel->targets->next) {
-		target_swap(&pMapLevel->targets->next);
-		target_swap(&pMapLevel->targets);
+		target_sort(&pMapLevel->targets->next);
+		target_sort(&pMapLevel->targets);
 	}
 	int done=QUESTDATA[0][36]&3;
 	int id=0,lvl=3000;
@@ -422,13 +422,48 @@ static void modifyRescueBarTarget() {
 		if (pTarget->dstLvl>=3000) {
 			pTarget->dstLvl=lvl++;
 			if (done||id>=2) {
-				pTarget->unitX+=dwRescueBarDx;pTarget->unitY+=dwRescueBarDy;
+				pTarget->p.unitX+=dwRescueBarDx;pTarget->p.unitY+=dwRescueBarDy;
 				pTarget->ready|=2;
-				pTarget->drawX=(pTarget->unitX-pTarget->unitY)*16;
-				pTarget->drawY=(pTarget->unitX+pTarget->unitY)*8;
+				pTarget->p.drawX=(pTarget->p.unitX-pTarget->p.unitY)*16;
+				pTarget->p.drawY=(pTarget->p.unitX+pTarget->p.unitY)*8;
 			}
 		}
 		pTarget->id=id++;
+	}
+}
+static void modifySealTarget() {
+	MinimapLevel *pMapLevel=&minimapLevels[Level_ChaosSanctuary];
+	if (!pMapLevel->targets) return;
+	int mx=0,my=0,n=0,topY=0x7FFFFFFF;
+	MinimapLevelTarget *pTopSeal=NULL,*leftTop=NULL,*leftBottom=NULL,*rightTop=NULL,*rightBottom=NULL,*t;
+	MinimapTargetPoint top,lt,lb,rt,rb;
+	for (MinimapLevelTarget *pTarget=pMapLevel->targets;pTarget;pTarget=pTarget->next) {
+		if (3000<=pTarget->dstLvl&&pTarget->dstLvl<=3004) {
+			mx+=pTarget->p.unitX;my+=pTarget->p.unitY;n++;
+			if (pTarget->p.unitY<topY) {topY=pTarget->p.unitY;pTopSeal=pTarget;}
+		}
+	}
+	mx/=n;my/=n;
+	for (MinimapLevelTarget *pTarget=pMapLevel->targets;pTarget;pTarget=pTarget->next) {
+		if (3000<=pTarget->dstLvl&&pTarget->dstLvl<=3004) {
+			if (pTarget==pTopSeal) continue;
+			if (pTarget->p.unitX<mx) {if (!leftTop) leftTop=pTarget;else leftBottom=pTarget;}
+			else {if (!rightTop) rightTop=pTarget;else rightBottom=pTarget;}
+		}
+	}
+	if (leftTop&&leftBottom&&leftTop->p.unitY>leftBottom->p.unitY) {t=leftTop;leftTop=leftBottom;leftBottom=t;}
+	if (rightTop&&rightBottom&&rightTop->p.unitY>rightBottom->p.unitY) {t=rightTop;rightTop=rightBottom;rightBottom=t;}
+	if (pTopSeal) top=pTopSeal->p;
+	if (leftTop) lt=leftTop->p;if (leftBottom) lb=leftBottom->p;
+	if (rightTop) rt=rightTop->p;if (rightBottom) rb=rightBottom->p;
+	for (MinimapLevelTarget *pTarget=pMapLevel->targets;pTarget;pTarget=pTarget->next) {
+		switch (pTarget->dstLvl) {
+			case 3000:if (pTopSeal) pTarget->p=top;else pTarget->ready=0;break;
+			case 3001:if (leftTop) pTarget->p=lt;else pTarget->ready=0;break;
+			case 3002:if (leftBottom) pTarget->p=lb;else pTarget->ready=0;break;
+			case 3003:if (rightTop) pTarget->p=rt;else pTarget->ready=0;break;
+			case 3004:if (rightBottom) pTarget->p=rb;else pTarget->ready=0;break;
+		}
 	}
 }
 CellFile *bitmap2dc6(BYTE *pixels, int width, int height) {
@@ -551,7 +586,10 @@ void RevealAutomapLevel(DrlgLevel *pDrlgLevel,int mode) {
 		if (needHide) mapHide(pInfo);
 	}
 	pMapLevel->revealed=mode;
-	if (pDrlgLevel->dwLevelNo==Level_FrigidHighlands) modifyRescueBarTarget();
+	switch (pDrlgLevel->dwLevelNo) {
+		case Level_FrigidHighlands: modifyRescueBarTarget();break;
+		case Level_ChaosSanctuary: modifySealTarget();break;
+	}
 	LOG("RevealAutomapLevel %d mode=%d time=%d ms\n",pDrlgLevel->dwLevelNo,mode,GetTickCount()-ms);
 	if (pDrlgLevel->dwLevelNo==dwCurrentLevel) {updateTargetName();AutoMapRoute();}
 }
@@ -1106,6 +1144,7 @@ int AddRectToMinimap(AreaRectInfo *pInfo,int revealed) {
 						case 563:if (levelno==131) {cellno=132;fAddCell=0;}break;//Worldstone Chamber
 						//case 402:if (srcLvl==46) {cellno=0;break;}//canyon/arcane waypoint
 						case 267:if (srcLvl!=75&&srcLvl!=103) {cellno=0;break;}//chests
+						case 255:if (srcLvl==Level_ChaosSanctuary) {cellno=255;fAddCell=0;break;} //center point
 						case 973: {
 							ObjectTxt *pObj = d2common_GetObjectTxt(pUnit->dwTxtFileNo);
 							cellno = pObj->nAutoMap;
@@ -1161,8 +1200,14 @@ int AddRectToMinimap(AreaRectInfo *pInfo,int revealed) {
 			}
 			if(fAddLine) {
 				if (cellno<0) cellno=-cellno;
-				if (srcLvl==46&&pInfo->pDrlgLevel&&pInfo->pDrlgLevel->pDrlgMisc->dwStaffTombLvl==cellno)
-					cellno=300 ;//方便指向设定
+				switch (srcLvl) {
+					case Level_CanyonoftheMagi:
+						if (pInfo->pDrlgLevel&&pInfo->pDrlgLevel->pDrlgMisc->dwStaffTombLvl==cellno) cellno=300;
+						break;
+					case Level_ChaosSanctuary:
+						if (cellno==306) {cellno=minimapTargetId;incTargetId=1;}
+						break;
+				}
 				addMinimapTarget(pInfo,srcLvl,cellno,unitX,unitY,pUnit->dwUnitType,pUnit->dwTxtFileNo);
 			}
 		}
@@ -1177,7 +1222,7 @@ static void DrawMinimapPoint() {
 		int color=routeLineColor;
 		POINT ptObj,ptPlayer,ptLine; 
 		draw2map(&ptPlayer,PLAYER->pMonPath->drawX,PLAYER->pMonPath->drawY);
-		draw2map(&ptObj,pTarget->drawX,pTarget->drawY);
+		draw2map(&ptObj,pTarget->p.drawX,pTarget->p.drawY);
 		int xDistance = ptObj.x-ptPlayer.x;
 		int yDistance = ptObj.y-ptPlayer.y;
 		if (abs(xDistance)<15&&abs(yDistance)<15) continue;

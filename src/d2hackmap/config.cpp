@@ -449,10 +449,16 @@ BOOL StoreArrayConfig(ConfigVar *config ,int index ,int arrays, char *arrayStr ,
 	}
 	return TRUE;
 }
+static int parseInt(char *s,char **pend) {
+	char *e;int t=strtol(s,&e,0);if (e==s) {if (pend) *pend=e;return 0;}
+	if (*e=='|') return t|parseInt(e+1,pend);
+	else if (*e=='+') return t+parseInt(e+1,pend);
+	if (pend) *pend=e;return t;
+}
 static void parseValues8(char *buf,char *values,int n) {
 	int prev=0 ;
 	for ( int i = 0 ; i < n ; i++ ){
-		char *end;int t = strtol(values, &end, 0);
+		char *end;int t = parseInt(values, &end);
 		if (values!=end) {values=end;buf[i]=(char)t;prev=t;}
 		else buf[i]=(char)prev;
 		if(*values) values++;
@@ -462,7 +468,7 @@ static void parseValues8(char *buf,char *values,int n) {
 static void parseValues32(int *buf,char *values,int n) {
 	int def=0 ;
 	for ( int i = 0 ; i < n ; i++ ){
-		char *end;int t = strtol(values, &end, 0);
+		char *end;int t = parseInt(values, &end);
 		if (values!=end) {values=end;buf[i]=t;}
 		else buf[i]=def;
 		if(*values) values++;
@@ -521,7 +527,7 @@ void StoreConfig(ConfigVar *config , char *arrays , char *right) {
 		case CONFIG_VAR_TYPE_ACCOUNT: {
 			int key=0;char *name,*pass="";
 			char *p=arrays;while (*p&&*p!='[') p++;p++;
-			if (*p) key=strtol(p,&p,0);
+			if (*p) key=parseInt(p,&p);
 			name=right;
 			while (*right&&*right!='\"') right++;
 			if (*right) {
@@ -536,11 +542,11 @@ void StoreConfig(ConfigVar *config , char *arrays , char *right) {
 			int lvl=0,dstLvl=0,type=0,n;
 			char *name=NULL;wchar_t wbuf[64],*enName=NULL,*chName=NULL;
 			char *p=arrays;while (*p&&*p!='[') p++;p++;
-			if (*p) lvl=strtol(p,&p,0);
+			if (*p) lvl=parseInt(p,&p);
 			while (*p&&*p!='[') p++;p++;
-			if (*p) dstLvl=strtol(p,&p,0);
+			if (*p) dstLvl=parseInt(p,&p);
 			while (*right&&!isdigit(*right)&&*right!='-') right++;
-			type=*right?strtol(right,&right,0):-1; 
+			type=*right?parseInt(right,&right):-1; 
 			if (!(*right)) goto addTargetEnd;
 			while (*right&&*right!='\"') right++;
 			if (!(*right)) goto addTargetEnd;
@@ -566,19 +572,19 @@ addTargetEnd:
 				ToggleVar *tgKey = (ToggleVar *)config->pVar;
 				tgKey->isLoad = TRUE;
 				if( tgKey->type == 1){ //开关类型
-					tgKey->isOn = (BYTE)strtoul(right,&endptr,0);//第一项 0 关 非0 开 
+					tgKey->isOn = parseInt(right,&endptr);//第一项 0 关 非0 开 
 					if(*endptr) endptr++;
-					if(*endptr) tgKey->key = strtoul(endptr,&endptr,0); //快捷键
+					if(*endptr) tgKey->key = parseInt(endptr,&endptr); //快捷键
 					else tgKey->key = -1;
 					if(*endptr) endptr++;
 					if(*endptr) {
-						tgKey->value32 = strtoul(endptr,&endptr,0); //默认值
+						tgKey->value32 = parseInt(endptr,&endptr); //默认值
 					}
 				} else {
 					//按键触发事件
-					tgKey->key = strtoul(right,&endptr,0);	//快捷键
+					tgKey->key = parseInt(right,&endptr);	//快捷键
 					if(*endptr) endptr++;
-					if(*endptr) tgKey->param = strtoul(endptr,&endptr,0); //参数
+					if(*endptr) tgKey->param = parseInt(endptr,&endptr); //参数
 				}
 				if (endptr&&*endptr) LOG("%s:%d Can't parse %s\n",cfgFileName,lineId,endptr);
 			}
@@ -586,22 +592,12 @@ addTargetEnd:
 		case CONFIG_VAR_TYPE_INT: {
 			char *endptr;
 			//数值
-			if (right[0]=='-') {
-				if( config->size32 == 1 ){
-					*((char *)config->pVar) = (char)strtol(right,&endptr,0);
-				}else if( config->size32 == 2 ){
-					*((short *)config->pVar) = (short)strtol(right,&endptr,0);
-				}else if( config->size32 == 4 ){
-					*((int *)config->pVar) = (int)strtol(right,&endptr,0);
-				}
-			} else {
-				if( config->size32 == 1 ){
-					*((BYTE *)config->pVar) = (BYTE)strtoul(right,&endptr,0);
-				}else if( config->size32 == 2 ){
-					*((WORD *)config->pVar) = (WORD)strtoul(right,&endptr,0);
-				}else if( config->size32 == 4 ){
-					*((DWORD *)config->pVar) = (DWORD)strtoul(right,&endptr,0);
-				}
+			if( config->size32 == 1 ){
+				*((char *)config->pVar) = (char)parseInt(right,&endptr);
+			}else if( config->size32 == 2 ){
+				*((short *)config->pVar) = (short)parseInt(right,&endptr);
+			}else if( config->size32 == 4 ){
+				*((int *)config->pVar) = (int)parseInt(right,&endptr);
 			}
 			if (endptr&&*endptr) LOG("%s:%d Can't parse %s\n",cfgFileName,lineId,endptr);
 			break;
@@ -644,7 +640,7 @@ addTargetEnd:
 			} else {
 				char buf[64],kbuf[32];
 				char *p=arrays+1;
-				int key=strtoul(p,&p,0);
+				int key=parseInt(p,&p);
 				int id=-1;
 				for (int i=0;i<dwMinimapScrollCount;i++) {if (tMiniMapScrollKeys[i].key==key) {id=i;break;}}
 				if (id<0) {
@@ -667,7 +663,7 @@ addTargetEnd:
 			} else {
 				char buf[64],kbuf[32];
 				char *p=arrays+1;
-				int key=strtoul(p,&p,0);
+				int key=parseInt(p,&p);
 				int id=-1;
 				for (int i=0;i<dwScreenScrollCount;i++) {if (tScreenScrollKeys[i].key==key) {id=i;break;}}
 				if (id<0) {
@@ -690,7 +686,7 @@ addTargetEnd:
 					AddWarningMessage(arrays,0);
 			} else {
 				char *p=arrays+1;
-				int key=strtoul(p,&p,0);
+				int key=parseInt(p,&p);
 				int id=-1;
 				for (int i=0;i<dwSwitchSkillKeyCount;i++) {if (dwSwitchSkillKeys[i]==key) {id=i;break;}}
 				if (id<0) {
@@ -777,10 +773,16 @@ static int changeLogPath(char *path) {
 	}
 	return id;
 }
+struct LoadingConfig {char *path;struct LoadingConfig *next;} *loadingConfigs=NULL;
 static void loadConfig(char *path) {
-	cfgFileName=path;
-	LOG("loading config %s\n",path);
+	for (LoadingConfig *lc=loadingConfigs;lc;lc=lc->next) {
+		if (_stricmp(path,lc->path)==0) {LOG("ERROR: looping loading config %s\n",path);return;}
+	}
 	FILE *fp=openFile(path,"r");if (!fp) return;
+	LOG("loading config %s\n",path);
+	LoadingConfig *lc=(LoadingConfig *)HeapAlloc(confHeap,0,sizeof(LoadingConfig));
+	lc->path=heap_strdup(confHeap,path);lc->next=loadingConfigs;loadingConfigs=lc;
+	cfgFileName=path;
 	int nLines=0;
 	while (1) {
 		char buf[1024];
@@ -839,6 +841,7 @@ static void loadConfig(char *path) {
 		}
 	}
 	LOG("Load %d lines from %s\n",nLines,path);
+	if (loadingConfigs) loadingConfigs=loadingConfigs->next;
 }
 void LoadLogNames(FILE *fp);
 BOOL LoadConfig() {
@@ -857,7 +860,7 @@ BOOL LoadConfig() {
 	if (logfp) {fclose(logfp);logfp=NULL;}
 	dwGameWindowId=changeLogPath("runtime\\d2hackmap%d.log");
 	InitValues();
-
+	loadingConfigs=NULL;
 	loadConfig(cfgName);
 	if (!fLoadItemColours) {
 		AddWarningMessage("Load Item Colours disabled",1);

@@ -8,6 +8,7 @@ void SaveGameName();
 int QuickExitGame();
 int fCanExitGame=0,fBackToTown=0,nTownportalAlertNums=-1;
 int fAutoNextGameName=0,fAutoNextGamePassword=0,fAutoNextGameDescription=0;
+static int takeWPtoTownDis=6;
 wchar_t	wszGameName[32]={0};
 wchar_t wszGamePassword[32]={0};
 wchar_t wszGameDescription[32]={0};
@@ -17,6 +18,7 @@ ToggleVar tQuickNextGame={TOGGLEVAR_DOWNPARAM,	0,	-1,	 1, "NextGame",	&QuickNext
 ToggleVar tQuickNextGame2={TOGGLEVAR_DOWNPARAM,	0,	-1,	 1, "NextGame2",	&QuickNextGame,	2};
 static ConfigVar aConfigVars[] = {
 	{CONFIG_VAR_TYPE_KEY, "QuickBackToTownKey",   &tBackToTown		    	},
+	{CONFIG_VAR_TYPE_INT, "TakeWaypointToTownDis",  &takeWPtoTownDis, 4    },
 	{CONFIG_VAR_TYPE_INT, "TownportalNumsAlert",  &nTownportalAlertNums, 4    },
   {CONFIG_VAR_TYPE_KEY, "QuickExitGameKey",      &tExitGame              },
   {CONFIG_VAR_TYPE_KEY, "QuickNextGameKey",      &tQuickNextGame         },
@@ -55,7 +57,7 @@ int skillCount(int skillid){
 int takeWaypointToTown(int maxdis);
 int BackToTown() {
 	if (fPlayerInTown) return 0;
-	if (takeWaypointToTown(6)) return 0;
+	if (takeWPtoTownDis&&takeWaypointToTown(takeWPtoTownDis)) return 0;
 	fBackToTown = TRUE;
 	lastSkill=PLAYER->pSkill->pRightSkill->pSkillInfo->wSkillId;
 	switchRightSkill(skillCount(219)>0?0xDB:0xDC);//use scroll first

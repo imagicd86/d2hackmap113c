@@ -1,8 +1,11 @@
 enum AAR_Direction {AAR_BOTTOM=0,AAR_LEFT=1,AAR_RIGHT=2,AAR_TOP=3,};
+struct MinimapTargetPoint {
+	int drawX,drawY,unitX,unitY,rectTileX,rectTileY,unitType,unitTxt;
+};
 struct MinimapLevelTarget {
 	int id,dstLvl,ready,type;
 	wchar_t *enName,*chName;
-	int drawX,drawY,unitX,unitY,tileX,tileY,unitType,unitTxt;
+	struct MinimapTargetPoint p;
 	struct MinimapLevelTarget *next;
 	struct RouteRect *dstRect,*rectRoute;
 	struct RouteTile *dstTile,*tileRoute,*tiles;

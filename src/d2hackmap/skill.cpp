@@ -453,7 +453,6 @@ static void checkUnit(UnitAny *pMon) {
 	if (minD2<curSkill->umindis2) {
 		if (d2>=minD2) return;
 	} 
-	//if (d2common_IsUnitBlocked(PLAYER,pMon,4)) return;
 	POINT p1,p2;
 	p1.x=PLAYER->pMonPath->wUnitX;p1.y=PLAYER->pMonPath->wUnitY;
 	p2.x=pMon->pMonPath->wUnitX;p2.y=pMon->pMonPath->wUnitY;

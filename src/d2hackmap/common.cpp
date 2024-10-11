@@ -66,7 +66,7 @@ FILE *openFile(char *path,char *mode) {
 			wsprintfW(temp,  L"can't open %hs", path);
 			d2client_ShowGameMessage(temp, 0);
 		}
-		LOG("open %s %s failed\r\n",path,mode);
+		LOG("open %s %s failed\n",path,mode);
 		return NULL;
 	} 
 	return fp;
@@ -287,14 +287,24 @@ float getUnitYardDistance2(UnitAny *pUnit1,UnitAny *pUnit2) {
 float getUnitYardDistance(UnitAny *pUnit1,UnitAny *pUnit2) {
 	return sqrt(getUnitYardDistance2(pUnit1,pUnit2));
 }
+static int *disM256=NULL,disM256_modified=0;
+void saveDistanceMap() {
+	if (!disM256||!disM256_modified) return;
+	FILE *fp=openFile("runtime\\dis256.cache.bin","wb+");
+	if (fp) {fwrite(disM256,1,128*128*sizeof(int),fp);fclose(fp);}
+}
 int getDistanceM256(int dx,int dy) {
-	static int *pMap=NULL;
 	if (dx<0) dx=-dx;if (dy<0) dy=-dy;
-	if (dx==0) return dy<<8;if (dy==0) return dx<<8;
-	if (dx>=128||dy>=128) return dx>dy?dx<<8:dy<<8;
-	if (!pMap) pMap=(int *)HeapAlloc(dllHeap,HEAP_ZERO_MEMORY,128*128*sizeof(int));
-	int *p=pMap+(dy<<7)+dx;
-	if (!p[0]) p[0]=(int)(sqrt((float)(dx*dx+dy*dy))*256);
+	if (dx>dy) {int t=dy;dy=dx;dx=t;}
+	if (dx==0) return dy<<8;
+	if (dy>=128) return dy<<8;
+	if (!disM256) {
+		disM256=(int *)HeapAlloc(dllHeap,HEAP_ZERO_MEMORY,128*128*sizeof(int));
+		FILE *fp=openFile("runtime\\dis256.cache.bin","rb");
+		if (fp) {fread(disM256,1,128*128*sizeof(int),fp);fclose(fp);}
+	}
+	int *p=disM256+(dy<<7)+dx;
+	if (!p[0]) {p[0]=(int)(sqrt((float)(dx*dx+dy*dy))*256);disM256_modified=1;}
 	return p[0];
 }
 float getPlayerDistanceRaw(UnitAny *pUnit) {

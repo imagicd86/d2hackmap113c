@@ -127,17 +127,16 @@ void QuestNewLevel() {
 		checkQuest(40,1,0x8000,"Baal"); 
 		if (aBugInfo[4].fEnable&&*aBugInfo[4].fEnable&&aBugInfo[4].nStatus&&aBugInfo[4].nType==2) {
 			char buf[32];char *name="BugKB";
+			wchar_t *fmt=dwGameLng?L"非%hs游戏,稍后将自动退出,按%hs取消保护"
+				:L"Not %s game, will quit later, press %s to disable protection";
 			if (tBugAutoQuit.isOn) {
-				formatKey(buf,tBugAutoQuit.key);
-				gameMessage("Not %s game, will quit later, press %s to disable protection",name,buf);
+				formatKey(buf,tBugAutoQuit.key);gameMessageW(fmt,name,buf);
 			}
 			if (DIFFICULTY==2&&tBugAutoQuitHell.isOn) {
-				formatKey(buf,tBugAutoQuitHell.key);
-				gameMessage("Not %s game, will quit later, press %s to disable protection",name,buf);
+				formatKey(buf,tBugAutoQuitHell.key);gameMessageW(fmt,name,buf);
 			}
 			if (DIFFICULTY==2&&ACTNO==4&&tBugAutoQuitHellAct5.isOn) {
-				formatKey(buf,tBugAutoQuitHellAct5.key);
-				gameMessage("Not %s game, will quit later, press %s to disable protection",name,buf);
+				formatKey(buf,tBugAutoQuitHellAct5.key);gameMessageW(fmt,name,buf);
 			}
 		}
 	}

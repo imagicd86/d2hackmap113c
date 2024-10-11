@@ -14,6 +14,7 @@
 /d2hackmap*.log
 /loadhackmap*.log
 /keymap.log
-/keymap.log
 /d2_*.txt
 /mpqlist.txt
+/mpqtable.bin
+/dis256.cache.bin

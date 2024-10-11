@@ -200,7 +200,7 @@ int AutoTeleportGetTarget(POINT *dst,int *unitType,int *unitTxt) {
 	MinimapLevel *pMapLevel=&minimapLevels[dwCurrentLevel];
 	MinimapLevelTarget *pTarget=pMapLevel->curTarget;
 	if (!pTarget) return 0;
-	*unitType=pTarget->unitType;*unitTxt=pTarget->unitTxt;
+	*unitType=pTarget->p.unitType;*unitTxt=pTarget->p.unitTxt;
 	RouteRect *path=pSrcRect;if (!path->dis) return 0;
 	if (path->pathNext) path=path->pathNext;
 	if (path->pathNext) path=path->pathNext;
@@ -274,10 +274,10 @@ static int initRectRoute(MinimapLevelTarget *pTarget) {
 		if (pInfo==pSrcInfo) pSrcRect=pr;
 		if (pTarget->ready&2) {
 			int ux=pr->tileX*5,uy=pr->tileY*5,uw=pr->tileW*5,uh=pr->tileH*5;
-			if (ux<=pTarget->unitX&&pTarget->unitX<ux+uw&&uy<=pTarget->unitY&&pTarget->unitY<uy+uh)
+			if (ux<=pTarget->p.unitX&&pTarget->p.unitX<ux+uw&&uy<=pTarget->p.unitY&&pTarget->p.unitY<uy+uh)
 				pTarget->dstRect=pr;
 		} else {
-			if (pr->tileX==pTarget->tileX&&pr->tileY==pTarget->tileY) pTarget->dstRect=pr;
+			if (pr->tileX==pTarget->p.rectTileX&&pr->tileY==pTarget->p.rectTileY) pTarget->dstRect=pr;
 		}
 		int needHide=0;
 		if (!pInfo->pAreaRectData) {mapReveal(pInfo);needHide=1;}
@@ -308,9 +308,9 @@ static void performRectRoute(MinimapLevelTarget *pTarget) {
 	}
 	RouteRect *head=NULL,*tail=NULL;head=tail=pTarget->dstRect;if (!head) return;
 	pTarget->ready|=4;
-	head->unitX=pTarget->unitX;head->unitY=pTarget->unitY;
-	head->drawX=(pTarget->unitX-pTarget->unitY)*16;
-	head->drawY=(pTarget->unitX+pTarget->unitY)*8;
+	head->unitX=pTarget->p.unitX;head->unitY=pTarget->p.unitY;
+	head->drawX=(pTarget->p.unitX-pTarget->p.unitY)*16;
+	head->drawY=(pTarget->p.unitX+pTarget->p.unitY)*8;
 	head->dis=0x10000;
 	head->emitNext=NULL;
 	while (head) {

@@ -9,8 +9,12 @@ HMODULE hInstDLL=NULL;
 char szDllPath[MAX_PATH]={0};
 char szPluginPath[MAX_PATH]={0};
 
+void saveDistanceMap();
 void UnLoadExtInfo();
+void saveMpqTable();
 void ReleaseMem() {
+	saveDistanceMap();
+	saveMpqTable();
 	UnLoadExtInfo();
 }
 

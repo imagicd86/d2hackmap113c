@@ -21,7 +21,7 @@
 	9 技能树
 	V 显示地图
 	技能1-8: Q,E,A,S,D,Z,X,C
-	技能9-16: Y,H,TAB,鼠标侧面前按键,鼠标侧面后按键,鼠标滚轮向上,鼠标滚轮向下,鼠标滚轮按下
+	技能9-16: Y,H,TAB,鼠标侧面前按键,鼠标滚轮按下
 d2hackmap常用按键说明,所有按键均可在map113c/config.txt中修改
 	Ctrl+R 重新加载配置文件,如果d2hackmap.dll已修改则重新加载dll
 	Alt+ENTER 切换全屏窗口模式
@@ -48,23 +48,27 @@ d2hackmap常用按键说明,所有按键均可在map113c/config.txt中修改
 	鼠标滚轮,切换导航目标
 	H 切换窗口在前台时是否自动使用技能
 	Ctrl+Alt+K 切换窗口在后台时是否自动使用技能
-	F键和鼠标侧面后面的键: 按住时自动使用技能,如果右键是传送的话则自动传送到目标地点
+	F键和鼠标侧面后面的键: 按住时自动使用技能,如果右键是传送的话则自动传送到目标地点,50FCR亚马逊轻松跑图
 
 多战网设置说明
-  比如有两个战网big.com(大箱子)和small.com(小箱子),客户端有以下4处位置不同data\global\excel\*,data\global\ui\Panel\*,patch_d2.mpq,PlugY.ini,可以把大的几个mpq文件移动到某个目录下比如d:\game\mpq(注意需要在原目录里留一个文件名为d2exp.mpq的空白文件),剩下的文件只有几十兆，复制两份放在d:\game\d2big和d:\game\d2small下分别设置好，然后建立以下两个快捷方式：
+  比如有两个战网big.com(大箱子)和small.com(小箱子),客户端有以下4处位置的文件不同data\global\excel\*,data\global\ui\Panel\*,patch_d2.mpq,PlugY.ini,可以把大的几个mpq文件移动到某个目录下比如d:\game\mpq,在原目录中建立相同文件名的空白文件,这样游戏目录就只有几十兆了,复制两份放在d:\game\d2big和d:\game\d2small下分别设置好，然后建立以下两个快捷方式：
   D:\game\d2big\D2Loader.exe -lq -locale chi -lq -pdir D:\d2hackmap\map113c -direct -skiptobnet -w -mpqpath=d:\game\mpq -bnetip=big.com -d2hackmapcfg=d:\big.txt
   D:\game\d2small\D2Loader.exe -lq -locale chi -lq -pdir D:\d2hackmap\map113c -direct -skiptobnet -w -mpqpath=d:\game\mpq -bnetip=small.com -d2hackmapcfg=d:\small.txt
   其中d:\big.txt和d:\small.txt是d2hackmap的设置文件，内容分别是
   --- d:\big.txt ---
-  Load Config File: "D:\d2hackmap\map113c\config.txt"
+  Load Config File: "D:\d2hackmap\map113c\config_def.txt"
+  Load Config File: "D:\d2hackmap\map113c\config_item.txt"
   //Load Config File: "D:\d2hackmap\map113c\config_my.txt"
+  Load Config File: "D:\d2hackmap\map113c\itemconf_right.txt"
   Account[VK_F1]: "bunny1","tuzi"
   Account[VK_F2]: "bunny2","tuzi"
   Account[VK_F3]: "bunny3","tuzi"
   Account[VK_F4]: "bunny4","tuzi"
   --- d:\small.txt ---
-  Load Config File: "D:\d2hackmap\map113c\config.txt"
+  Load Config File: "D:\d2hackmap\map113c\config_def.txt"
+  Load Config File: "D:\d2hackmap\map113c\config_item.txt"
   //Load Config File: "D:\d2hackmap\map113c\config_my.txt"
+  Load Config File: "D:\d2hackmap\map113c\itemconf_left.txt"
   Account[VK_F1]: "bunny1","tuzi"
   Account[VK_F2]: "bunny2","tuzi"
   Account[VK_F3]: "bunny3","tuzi"

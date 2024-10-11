@@ -7,23 +7,50 @@ typedef unsigned int u32;
 
 int dwDumpMpqPath;
 
+static u32 mpq_crypt_table[0x500];
+void init_crypt_table() {
+	u32 seed=0x00100001;
+	for(int i = 0; i < 0x100; i++) {
+		for(int j = i; j < 0x500; j += 0x100) {
+			seed=(seed*125+3)%0x2AAAAB;u32 high=(seed&0xFFFF)<<16;
+			seed=(seed*125+3)%0x2AAAAB;mpq_crypt_table[j]=high|(seed&0xFFFF);
+		}
+	}
+}
 u32 mpq_hashstring(const char *s, u32 offset) {
 	u32 a=0x7FED7FED,b=0xEEEEEEEE,c;
-	if (s) while (*s) {c=toupper(*s++);a=storm_pmpq_crypt_table[offset+c]^(a+b);b=c+a+b+(b<<5)+3;}
+	if (s) while (*s) {c=toupper(*s++);a=mpq_crypt_table[offset+c]^(a+b);b=c+a+b+(b<<5)+3;}
 	return a;
 }
-char *mpq_list_path="runtime/mpqlist.txt";
+static char *mpq_table_path="runtime/mpqtable.bin";
+static char *mpq_list_path="runtime/mpqlist.txt";
+static int mpq_table_modified=0;
 struct mpqhash {int a,b;};
 static struct mpqhash *mpqhashs=NULL;
 static int mpq_err=0;
 static FILE *mpq_fp=NULL;
+void saveMpqTable() {
+	if (!mpqhashs||!mpq_table_modified) return;
+	FILE *fp=openFile(mpq_table_path,"wb+");
+	if (fp) {
+		fwrite(mpqhashs,1,sizeof(struct mpqhash)*0x10000,fp);fclose(fp);
+		LOG("Save %s %d\n",mpq_table_path,mpq_table_modified);
+		mpq_table_modified=0;
+	}
+}
 int __fastcall add_mpq_path(char *path) {
 	int pos=mpq_hashstring(path,0)&0xFFFF;
 	int a=mpq_hashstring(path,0x100),b=mpq_hashstring(path,0x200);
 	for (int i=0;i<0x10000;i++) {
 		struct mpqhash *p=&mpqhashs[pos];
 		if (p->a==a&&p->b==b) return 0;
-		if (p->a==0&&p->b==0) {p->a=a;p->b=b;return 1;}
+		if (p->a==0&&p->b==0) {
+			p->a=a;p->b=b;mpq_table_modified++;
+			if (mpq_fp) {
+				fprintf(mpq_fp,"#%04X %08X_%08X\t%s\n",pos,a,b,path);fflush(mpq_fp);
+			}
+			return 1;
+		}
 		pos++;if (pos>=0x10000) pos=0;
 	}
 	return 0;
@@ -32,7 +59,20 @@ void __fastcall dump_mpq_path(int esp0) {
 	if (mpq_err>100) return;
 	if (!mpq_fp) {
 		LOG("mpq list %s\n",mpq_list_path);
-		if (!mpqhashs) mpqhashs=(struct mpqhash *)calloc(0x10000,sizeof(struct mpqhash));
+		if (!mpqhashs) {
+			init_crypt_table();
+			mpqhashs=(struct mpqhash *)HeapAlloc(dllHeap,HEAP_ZERO_MEMORY,0x10000*sizeof(struct mpqhash));
+			FILE *fp=openFile(mpq_table_path,"rb");
+			if (fp) {
+				fread(mpqhashs,1,sizeof(struct mpqhash)*0x10000,fp);fclose(fp);
+				int n=0;
+				for (int i=0;i<0x10000;i++) {
+					if (mpqhashs[i].a||mpqhashs[i].b) n++;
+				}
+				LOG("Load %s %d\n",mpq_table_path,n);
+			}
+		}
+		/*
 		FILE *fplist=openFile(mpq_list_path,"r");
 		if (fplist) {
 			while (1) {
@@ -42,11 +82,13 @@ void __fastcall dump_mpq_path(int esp0) {
 			}
 			fclose(fplist);
 		}
+		*/
 		mpq_fp=openFile(mpq_list_path,"a+");
 		if (!mpq_fp) mpq_err++;
 	}
 	char *path=(char *)*(int *)(esp0+8);
 	if (mpq_fp&&add_mpq_path(path)) {
+		/*
 		int ret=*(int *)esp0;
 		if (ret!=(int)storm_mpq_open_block+0x3F) {
 			char *mpq="";
@@ -65,6 +107,7 @@ void __fastcall dump_mpq_path(int esp0) {
 		}
 		ret=*(int *)(esp0+4+24);
 		fprintf(mpq_fp,"#d2cmp3010 %X\t%s\n",ret,path);fflush(mpq_fp);
+		*/
 	}
 }
 /* 
