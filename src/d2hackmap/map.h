@@ -24,7 +24,7 @@ extern BYTE anMonsterColours[1000];
 int RevealCurAct();
 int RevealLevelPlayerIn();
 int NextLevelTarget();
-int AutoTeleportGetTarget(POINT *dst,int *unitType,int *unitTxt);
+int AutoTeleportGetTarget(POINT *dst,int *unitType,int *unitTxt,int *pdis);
 
 void draw2map(POINT *minimap,int drawX,int drawY);
 void tile2map(POINT* pos, int x, int y);

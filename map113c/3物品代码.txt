@@ -622,18 +622,22 @@ Dimensional-Shrd--次元碎片-----obf---301
 Stag-Bow----------男性之弓------am1---282
 Ashwood-Bow-------灰木之弓------am6---292
 Matriarchal-Bow---女族长之弓----amb---302
+
 Reflex-Bow--------反射之弓------am2---283
 Ceremonial-Bow----祭典之弓------am7---293
 Grnd-Matron-Bow---大院长之弓----amc---303
+
 Maiden-Spear------女士之矛------am3---284
 Ceremonial-Spr----祭典之矛------am8---294
 Matriarchal-Spr---女族长之矛----amd---304
+
 Maiden-Pike-------女士长矛------am4---285
 eremonial-Pike----祭典长矛------am9---295
 Matriarchal-Pik---女族长之长矛--ame---305
-Maiden-Javelin----女士标枪------am5---286
-Ceremonial-Jav----祭典标枪------ama---296
-Matriarchal-Jav---女族长之标枪--amf---306
+
+Maiden-Javelin----女士标枪------am5---286 L17 speed-10 STR33 DEX47 (1hand)8-14
+Ceremonial-Jav----祭典标枪------ama---296 L26 speed-10 STR25 DEX109 (1hand)18-35
+Matriarchal-Jav---女族长之标枪--amf---306 L48 speed-10 STR107 DEX151 (1hand)30-54
 
 
 三.Other-Items-其他

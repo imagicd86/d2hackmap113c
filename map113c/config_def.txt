@@ -740,7 +740,7 @@ AutoTeleportAvoidEdge: 3 //Ö»ÓĞ9¸öÇøÓò¿é120*120·¶Î§ÄÚµÄ¹ÖÎï»áÏÔÊ¾,´«ËÍµ½±ßÔµ²»Ò»
 AutoTeleportMaxDistance: 30 //Ã¿´Î×î¶à´«ËÍ33yard
 AutoTeleportMinStep: 5 //Ã¿´ÎÖÁÉÙÇ°½ø5×îĞ¡µ¥Î»,·ñÔò¸ü»»Â·¾¶
 AutoTeleportStepInvalidMs: 3000 //Èç¹ûÎŞ·¨Ç°½ø,´ËÂ·¾¶3ÃëÄÚ²»ÔÙÊ¹ÓÃ
-TPLineColor: 0x62 //´«ËÍÊ±ÏÔÊ¾Ä¿±êÏß,ÉèÎª0²»ÏÔÊ¾,´«ËÍÊ±²»¿ªĞ¡µØÍ¼Ê¡CPU
+TPLineColor: 0x62 //´«ËÍÊ±ÏÔÊ¾Ä¿±êÏß,ÉèÎª0²»ÏÔÊ¾
 RerouteKey: ALT+VK_H //ÖØĞÂÂ·ÓÉ
 LogTPToggle: 0,VK_ //½«Ã¿´Î´«ËÍµÄÊı¾İ¼ÇÂ¼µ½runtime/d2hackmap*.logÖĞ
 //×Ô¶¯´«ËÍÊ±¹ÖÎï¾àÀëµÄÉè¶¨,´«ËÍÊ±»áÑ¡ÔñÂú×ãÌõ¼şµÄµã,¹ÖÎï¾àÀëÉèÖÃÔ½Ğ¡¿ÉÑ¡Ôñ¿Õ¼äÔ½´ó´«ËÍÔ½¿ì
@@ -801,6 +801,9 @@ NecNoAttackInHellToggle: 0,VK_  //µØÓüÄÑ¶ÈNEC×ó¼ü¼¼ÄÜÉèÎªÆÕÍ¨¹¥»÷Ê±×ó¼üµã»÷¹ÖÎïÖ
 //SwitchSkillStandStill[°´¼ü]: 1:°´×¡¼üÊ±Õ¾ÔÚÔ­µØ²»¶¯
 //Ö°Òµ:ClassAma:1 ClassSor:2 ClassNec:3 ClassPal:4 ClassBar:5 ClassDru:6 ClassAsn:7 ClassAll:1-7
 //¼¼ÄÜÇë²éÔÄsymbols/skills.txt
+SwitchSkillLeft[SHIFT+VK_S][ClassAma]: SkillJab,-1,-1,-1
+SwitchSkillLeft[SHIFT+VK_D][ClassAma]: SkillChargedStrike,-1,-1,-1
+SwitchSkillLeft[SHIFT+VK_C][ClassAma]: SkillImpale,-1,-1,-1
 SwitchSkillRight[SHIFT+VK_D][ClassNec]: SkillLowerResist,-1,-1,-1
 SwitchSkillRight[SHIFT+VK_C][ClassNec]: SkillLifeTap,-1,-1,-1
 SwitchSkillRight[SHIFT+VK_S][ClassNec]: SkillBoneWall,-1,-1,-1

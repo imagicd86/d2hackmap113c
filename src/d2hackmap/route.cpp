@@ -195,7 +195,7 @@ void markNextPathInvalid(int ms) {
 	pSrcRect->skipDirMs[pSrcRect->pathDir]=dwCurMs+ms;
 }
 //return 0:noTarget 1:continue 2:end 3:enter 4:forceEnter >=5:keep safe distance
-int AutoTeleportGetTarget(POINT *dst,int *unitType,int *unitTxt) {
+int AutoTeleportGetTarget(POINT *dst,int *unitType,int *unitTxt,int *pdis) {
 	if (!AutoRouteLocateSource(1)) return 0;if (!pSrcRect) return 0;
 	MinimapLevel *pMapLevel=&minimapLevels[dwCurrentLevel];
 	MinimapLevelTarget *pTarget=pMapLevel->curTarget;
@@ -205,6 +205,7 @@ int AutoTeleportGetTarget(POINT *dst,int *unitType,int *unitTxt) {
 	if (path->pathNext) path=path->pathNext;
 	if (path->pathNext) path=path->pathNext;
 	dst->x=path->unitX;dst->y=path->unitY;
+	if (pdis) *pdis=((path->dis>>16)-1)*path->tileW*5;
 	if (path->pathNext) return 1;
 	if (path->pTarget->type==1) return 3;
 	if (path->pTarget->type==2) return 4;

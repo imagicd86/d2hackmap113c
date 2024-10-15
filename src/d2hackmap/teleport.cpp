@@ -9,7 +9,9 @@ void takeWaypointToLevel(UnitAny *waypoint,int level);
 void markNextPathInvalid(int ms);
 int RerouteRectPath();
 
-POINT TPtarget;int dwTpMs,dwTpDoneMs;
+POINT TPtarget;
+int dwTpMs,dwTpDoneMs;
+static int dwLastTpMs;
 static char aMonYard[32][2];
 static int defMonYard,maxTpYard,tpDelayMs,tpMinStep,stepInvalidMs,avoidEdge=0;
 static int reachDis=6;
@@ -34,22 +36,40 @@ void autoteleport_initConfigVars() {
 void autoteleport_fixValues() {
 	maxTpDisRaw=(maxTpYard*3)>>1;
 }
-struct Mon {
-	POINT p;
-	int dis;
-};
+struct TPPos {POINT p;int disM256;AreaRectData *pData;};
+struct Mon {POINT p;int dis;};
 static POINT src,dst;
-Mon *mons=NULL,*mons_end;
-static int monCap=0,nMons=0,maxTpDis2;
-static int moveOn,minDstDis2,minDstMonDis,maxMonDis;
-static POINT minDstP,maxMonP;
-static AreaRectData *minDstRect,*maxMonRect;
+static TPPos *tposs=NULL;
+static int nPos=0,posCap=0;
+static Mon *mons=NULL,*mons_end;
+static int monCap=0,nMons=0,maxTpDisM256;
+static char monMap[32][32];
+static int monMapX,monMapY;
+static int maxDisM256;
+static POINT bestP;
+static AreaRectData *bestRect;
+static int distanceLeftFromTarget=0;
 
+static int comparePos(const void *a,const void *b) {return ((TPPos *)a)->disM256-((TPPos *)b)->disM256;}
 static int dis(POINT *p1,POINT *p2) {return getDistanceM256(p1->x-p2->x,p1->y-p2->y)>>8;}
-static int dis2(POINT *p1,POINT *p2) {int dx=p1->x-p2->x,dy=p1->y-p2->y;return dx*dx+dy*dy;}
-static void findMonsters() {
+static int disM256(POINT *p1,POINT *p2) {return getDistanceM256(p1->x-p2->x,p1->y-p2->y);}
+//static int dis2(POINT *p1,POINT *p2) {int dx=p1->x-p2->x,dy=p1->y-p2->y;return dx*dx+dy*dy;}
+static void addMonMap(int x,int y) {
+	x-=monMapX;y-=monMapY;if (x<0||x>=128||y<0||y>=128) return;
+	monMap[y>>2][x>>2]=1;
+}
+static int hasMon(int x,int y) {
+	x-=monMapX;y-=monMapY;if (x<0||x>=128||y<0||y>=128) return 0;
+	return monMap[y>>2][x>>2];
+}
+static void resetMonsters() {
 	if (!mons) {monCap=4096;mons=(Mon *)HeapAlloc(dllHeap,0,sizeof(Mon)*monCap);}
-	nMons=0;
+	memset(monMap,0,32*32);
+	monMapX=dwPlayerX-64;monMapY=dwPlayerY-64;
+	nMons=0;mons_end=mons;
+}
+static void findMonsters() {
+	resetMonsters();
 	for (int i=0;i<128;i++) {
 		for (UnitAny *pMon=d2client_pUnitTable[UNITNO_MONSTER*128+i];pMon;pMon=pMon->pHashNext) {
 			if (pMon->dwUnitType!=UNITNO_MONSTER) break;
@@ -60,10 +80,11 @@ static void findMonsters() {
 			if (mtype&MONSTER_TYPE_NEUTRAL) continue;
 			if (nMons>=monCap) {monCap*=2;mons=(Mon *)HeapReAlloc(dllHeap,0,mons,sizeof(Mon)*monCap);}
 			Mon *pmon=&mons[nMons++];
-			pmon->p.x=pMon->pMonPath->wUnitX;pmon->p.y=pMon->pMonPath->wUnitY;
+			int x=pMon->pMonPath->wUnitX;int y=pMon->pMonPath->wUnitY;pmon->p.x=x;pmon->p.y=y;
 			pmon->dis=aMonYard[dwPlayerFcrFrame][(mtype&MONSTER_TYPE_DANGROUS)?1:0];
 			if (!pmon->dis) pmon->dis=defMonYard;
 			pmon->dis=(pmon->dis*3)>>1;
+			addMonMap(x-2,y-2);addMonMap(x-2,y+2);addMonMap(x+2,y-2);addMonMap(x+2,y+2);
 		}
 	}
 	mons_end=mons+nMons;
@@ -76,7 +97,7 @@ static int getMonDis(POINT *src) {
 	}
 	return minDis;
 }
-static void checkRect(AreaRectData *pCenter,AreaRectData *pData,POINT *p,int step,int findSafePlace) {
+static void addPossiblePostions(AreaRectData *pCenter,AreaRectData *pData,POINT *p,int step) {
 	if (!pData||!pData->bitmap) return;
 	unsigned short *bitmap=pData->bitmap->bitmap;
 	int w=pData->bitmap->unitW,h=pData->bitmap->unitH;
@@ -104,31 +125,41 @@ static void checkRect(AreaRectData *pCenter,AreaRectData *pData,POINT *p,int ste
 			POINT p;
 			for (int y=ty;y<y2;y++) {
 				for (int x=tx;x<x2;x++) {
-					if (ptr>=end) goto next;
-					if (((*ptr++)&0x1527)==0) {p.x=pData->unitX+x;p.y=pData->unitY+y;goto check;}
+					if (ptr>=end) goto nextTile;
+					if (((*ptr++)&0x1527)==0) {
+						p.x=pData->unitX+x;
+						p.y=pData->unitY+y;
+						if (hasMon(p.x,p.y)) goto nextTile;
+						if (disM256(&src,&p)>maxTpDisM256) goto nextTile;
+						int dstM256=disM256(&dst,&p);
+						if (dstM256>maxDisM256) goto nextTile;
+						if (nPos>=posCap) {posCap*=2;tposs=(TPPos *)HeapReAlloc(dllHeap,0,tposs,sizeof(TPPos)*posCap);}
+						TPPos *pp=&tposs[nPos++];pp->p=p;pp->disM256=dstM256;pp->pData=pData;
+						goto nextTile;
+					}
 				}
 				ptr+=rowskip;
 			}
-next:
+nextTile:
 			continue;
-check:
-			if (dis2(&src,&p)>maxTpDis2) continue;
-			if (!findSafePlace) {
-				int dst2=dis2(&dst,&p);
-				if (dst2>=minDstDis2) continue;
-				int minMonDis=0x7FFFFFFF;
-				for (Mon *mon=mons;mon<mons_end;mon++) {
-					int d=dis(&p,&mon->p)-mon->dis;
-					if (d<0) goto next;
-					if (d<minMonDis) minMonDis=d;
-				}
-				minDstDis2=dst2;minDstMonDis=minMonDis;minDstRect=pData;minDstP=p;moveOn=1;
-			} else {
-				int monDis=getMonDis(&p);
-				if (monDis>maxMonDis) {maxMonDis=monDis;maxMonRect=pData;maxMonP=p;}
-			}
 		}
 	}
+}
+static int findValidPosition() {
+	qsort(tposs,nPos,sizeof(TPPos),comparePos);
+	TPPos *end=tposs+nPos;
+	for (TPPos *p=tposs;p<end;p++) {
+		int minMonDis=0x7FFFFFFF;
+		for (Mon *mon=mons;mon<mons_end;mon++) {
+			int d=dis(&p->p,&mon->p)-mon->dis;
+			if (d<0) goto nextPosition;
+			if (d<minMonDis) minMonDis=d;
+		}
+		bestRect=p->pData;bestP=p->p;return minMonDis;
+nextPosition:
+		continue;
+	}
+	return -1;
 }
 static void enter(POINT *src,int type,int txt) {
 	POINT p;
@@ -138,7 +169,7 @@ static void enter(POINT *src,int type,int txt) {
 			if (pUnit->dwUnitType!=type) break;
 			if (pUnit->dwTxtFileNo!=txt) continue;
 			p.x=pUnit->pItemPath->unitX;p.y=pUnit->pItemPath->unitY;
-			if (dis2(src,&p)<50) {
+			if (dis(src,&p)<7) {
 				if (type==2&&isWaypointTxt(pUnit->dwTxtFileNo)) {
 					takeWaypointToLevel(pUnit,actlvls[ACTNO]);
 				}
@@ -152,7 +183,11 @@ extern int dwTotalMonsterCount;
 int unexpectedMonCount=0,unexpectedMonTotalMs=0;
 int AutoTeleportEnd() {
 	if (unexpectedMonCount) {
-		gameMessage("%d monster appear after TP, avgMs=%d",unexpectedMonCount,unexpectedMonTotalMs/unexpectedMonCount);
+		switch (dwCurrentLevel) {
+			case Level_TheWorldstoneChamber:break;
+			default:
+			gameMessage("%d monster appear after TP, avgMs=%d",unexpectedMonCount,unexpectedMonTotalMs/unexpectedMonCount);
+		}
 		unexpectedMonCount=0;unexpectedMonTotalMs=0;
 	}
 	return 0;
@@ -160,12 +195,15 @@ int AutoTeleportEnd() {
 static int targetType=0,targetTxt=0,hasTarget=0,dstType=0,curdis;
 static int startProcessMs=0,tpMonCount;
 //0:failed 1:ok
-static int doTeleport2(int findSafePlace) {
+static int teleportForward() {
+	wchar_t buf[128];
 	LARGE_INTEGER perfFreq,perfStart,perfEnd;
 	if (tLogTP.isOn) QueryPerformanceCounter(&perfStart);
 	AreaRectData *pData = PLAYER->pMonPath->pAreaRectData;
+	maxDisM256=(curdis-tpMinStep)*256;
+	nPos=0;
+	addPossiblePostions(pData,pData,NULL,5);
 	int dx=dst.x-src.x,dy=dst.y-src.y;
-	checkRect(pData,pData,NULL,5,findSafePlace);
 	for (int i=0;i<pData->nearbyRectCount;i++) {
 		AreaRectData *pNData=pData->paDataNear[i];if (pNData==pData) continue;
 		int dtx=pNData->tileX-pData->tileX;
@@ -183,86 +221,62 @@ static int doTeleport2(int findSafePlace) {
 				if (dtx>0||dty>0) continue;
 			}
 		}
-		checkRect(pData,pNData,NULL,5,findSafePlace);
+		addPossiblePostions(pData,pNData,NULL,5);
 	}
-	POINT p;
-	if (!findSafePlace&&!moveOn) return 0;
-	if (!findSafePlace) {
-		p=minDstP;
-		checkRect(pData,minDstRect,&p,5,findSafePlace);
-		p=minDstP;
-	} else {
-		p=maxMonP;
-		checkRect(pData,maxMonRect,&p,5,findSafePlace);
-		p=maxMonP;
+	int monDis=findValidPosition();if (monDis<0) return 0;
+	nPos=0;addPossiblePostions(pData,bestRect,&bestP,5);
+	monDis=findValidPosition();
+	int newDis=getDistanceM256(bestP.x-dst.x,bestP.y-dst.y)>>8;
+	if (abs(src.x-bestP.x)<=3&&abs(src.y-bestP.y)<=3) {startProcessMs=dwCurMs+300;return 2;}
+	if (tLogTP.isOn) {
+		QueryPerformanceCounter(&perfEnd);QueryPerformanceFrequency(&perfFreq);
+		int timeUs=(int)((perfEnd.QuadPart-perfStart.QuadPart)*1000000.0/perfFreq.QuadPart);
+		LOG(" TP (%d,%d)->(%d,%d) dis=%d new_distance=%d mon=%d monDis=%d search=%dus last=%dms\n",
+			src.x,src.y,bestP.x,bestP.y,
+			getDistanceM256(bestP.x-src.x,bestP.y-src.y)>>8,newDis,nMons,monDis,timeUs,dwLastTpMs);
 	}
-	int newDis=getDistanceM256(p.x-dst.x,p.y-dst.y)>>8;
-	if (dstType==1&&newDis>reachDis&&curdis-newDis<tpMinStep) {
-		if (tLogTP.isOn) 
-			LOG("TP can't move on curdis=%d newdis=%d tpMinStep=%d\n",curdis,newDis,tpMinStep);
-		markNextPathInvalid(stepInvalidMs);
-		RerouteRectPath();
-		return 0;
-	} else {
-		if (abs(src.x-p.x)<=1&&abs(src.y-p.y)<=1) {startProcessMs=dwCurMs+300;return 2;}
-		if (tLogTP.isOn) {
-			QueryPerformanceCounter(&perfEnd);QueryPerformanceFrequency(&perfFreq);
-			double timeMs=(perfEnd.QuadPart-perfStart.QuadPart)*1000.0/perfFreq.QuadPart;
-			LOG(" TP %s(%d,%d)->(%d,%d) dis=%d new_distance=%d mon=%d monDis=%d search=%.3lfms\n",
-				findSafePlace?"safe":"move",src.x,src.y,p.x,p.y,
-				getDistanceM256(p.x-src.x,p.y-src.y)>>8,newDis,nMons,findSafePlace?maxMonDis:minDstMonDis,timeMs);
-		}
-		tpMonCount=dwTotalMonsterCount;dwTpMs=dwCurMs;TPtarget=p;dwTpDoneMs=0;
-		RightSkillPos(p.x,p.y);
-		return 1;
+	tpMonCount=dwTotalMonsterCount;dwTpMs=dwCurMs;TPtarget=bestP;dwTpDoneMs=0;
+	RightSkillPos(bestP.x,bestP.y);
+	wsprintfW(buf,dwGameLng?L"æ‡¿Î %d":L"forward %d",distanceLeftFromTarget+curdis);
+	SetBottomAlertMsg3(buf,dwPlayerFcrMs+50, 2,0);
+	return 1;
+}
+static int findSafestPosition() {
+	TPPos *end=tposs+nPos;int maxDis=0;
+	for (TPPos *p=tposs;p<end;p++) {
+		int monDis=getMonDis(&p->p);
+		if (monDis>maxDis) {maxDis=monDis;bestRect=p->pData;bestP=p->p;}
 	}
+	return maxDis;
+}
+static int teleportToSafety() {
+	wchar_t buf[128];
+	AreaRectData *pData = PLAYER->pMonPath->pAreaRectData;
+	maxDisM256=0x7FFFFFFF;nPos=0;
+	addPossiblePostions(pData,pData,NULL,5);
+	for (int i=0;i<pData->nearbyRectCount;i++) {
+		AreaRectData *pNData=pData->paDataNear[i];if (pNData==pData) continue;
+		addPossiblePostions(pData,pNData,NULL,5);
+	}
+	findSafestPosition();
+	nPos=0;addPossiblePostions(pData,bestRect,&bestP,5);
+	int monDis=findSafestPosition();
+	if (abs(src.x-bestP.x)<=3&&abs(src.y-bestP.y)<=3) {startProcessMs=dwCurMs+300;return 0;}
+	if (tLogTP.isOn) 
+		LOG("TP find safe (%d,%d) curdis=%d monDis=%d\n",bestP.x,bestP.y,curdis,monDis);
+	tpMonCount=dwTotalMonsterCount;dwTpDoneMs=0;
+	dwTpMs=dwCurMs;dwTpDoneMs=0;TPtarget=bestP;
+	RightSkillPos(bestP.x,bestP.y);
+	wsprintfW(buf,dwGameLng?L"∂„±‹ %d":L"find safe %d",distanceLeftFromTarget+curdis);
+	SetBottomAlertMsg3(buf,dwPlayerFcrMs+50, 2,0);
+	return 1;
 }
 //return 0:failed 1:ok 2:autoSkill
 static int doTeleport() {
-	AreaRectData *pData = PLAYER->pMonPath->pAreaRectData;
-	moveOn=0;minDstDis2=0x7FFFFFFF;maxMonDis=0;
-	dstType=AutoTeleportGetTarget(&dst,&targetType,&targetTxt);
-	//0:noTarget 1:continue 2:end 3:enter 4:forceEnter >=5:keep safe distance
-	//LOG("AutoTeleport dst(%d,%d) type %d\n",dst.x,dst.y,dstType);
-	if (!dstType) {startProcessMs=dwCurMs+200;return 2;}
-	nMons=0;mons_end=mons+nMons;
-	if (dstType!=4) findMonsters();
-	curdis=getDistanceM256(dst.x-src.x,dst.y-src.y)>>8;
-	if (curdis<reachDis&&dstType==3) {
-		enter(&src,targetType,targetTxt);startProcessMs=dwCurMs+300;return 1;
-	}
-	if (dstType>=5&&curdis<dstType) { //find safe place
-		checkRect(pData,pData,NULL,5,1);
-		for (int i=0;i<pData->nearbyRectCount;i++) {
-			AreaRectData *pNData=pData->paDataNear[i];if (pNData==pData) continue;
-			checkRect(pData,pNData,NULL,5,1);
-		}
-		POINT p=maxMonP;
-		checkRect(pData,maxMonRect,&p,5,1);
-		p=maxMonP;
-		if (abs(src.x-p.x)<=3&&abs(src.y-p.y)<=3) {startProcessMs=dwCurMs+300;return 2;}
-		if (tLogTP.isOn) 
-			LOG("TP find safe (%d,%d) curdis=%d monDis=%d\n",p.x,p.y,curdis,maxMonDis);
-		tpMonCount=dwTotalMonsterCount;dwTpDoneMs=0;
-		dwTpMs=dwCurMs;dwTpDoneMs=0;TPtarget=p;
-		RightSkillPos(p.x,p.y);
-		return 1;
-	}
-	if (curdis<reachDis) { //reached
-		int monDis=getMonDis(&src);
-		if (monDis>=30) {
-			if (tLogTP.isOn) 
-				LOG("reached dst=%d monDis=%d\n",curdis,monDis);
-			startProcessMs=dwCurMs+300;return 2;
-		}
-	}
-	if (doTeleport2(0)) return 1;
-	if (dstType<2) return 0;
-	if (doTeleport2(1)) return 1;
-	return 0;
 }
 //return 1 if auto skill can be used
 int AutoTeleport() {
+	if (!tposs) {posCap=4096;tposs=(TPPos *)HeapAlloc(dllHeap,0,sizeof(TPPos)*posCap);}
 	targetType=0;targetTxt=0;hasTarget=0;dstType=0;
 	if (src.x==dwPlayerX&&src.y==dwPlayerY) {
 		if (dwCurMs-dwTpMs<300&&dwTotalMonsterCount>tpMonCount) {
@@ -271,15 +285,7 @@ int AutoTeleport() {
 			tpMonCount=dwTotalMonsterCount;
 		}
 	} else if (!dwTpDoneMs) {
-		dwTpDoneMs=dwCurMs;
-		if (0&&tLogTP.isOn) {
-			if (logfp) {
-				fprintf(logfp," done %dms",dwTpDoneMs-dwTpMs);
-				if (dwPlayerX!=TPtarget.x||dwPlayerY!=TPtarget.y) 
-					fprintf(logfp," expect (%d,%d) actual (%d,%d)\n",TPtarget.x,TPtarget.y,dwPlayerX,dwPlayerY);
-				fputc('\n',logfp);fflush(logfp);
-			}
-		}
+		dwTpDoneMs=dwCurMs;dwLastTpMs=dwTpDoneMs-dwTpMs;
 		startProcessMs=dwCurMs+tpDelayMs;
 	}
 	if (dwCurMs<startProcessMs) return 0;
@@ -304,23 +310,51 @@ int AutoTeleport() {
 			}
 			break;
 	}
-	maxTpDis2=maxTpYard;maxTpDis2=(maxTpDis2*maxTpDis2*9)>>2;
+	maxTpDisM256=maxTpYard*256*3/2;
 	src.x=dwPlayerX;src.y=dwPlayerY;
-	moveOn=0;minDstDis2=0x7FFFFFFF;maxMonDis=0;
 	if (hasTarget) {
 		AreaRectData *pData = PLAYER->pMonPath->pAreaRectData;
-		int curdis2=dis2(&src,&dst);
-		if (curdis2<5*5) return 1;
-		if (curdis2<maxTpDis2) {dwTpMs=dwCurMs;dwTpDoneMs=0;TPtarget=dst;RightSkillPos(dst.x,dst.y);return 1;}
-		nMons=0;mons_end=mons+nMons;
-		for (int i=0;i<pData->nearbyRectCount;i++) checkRect(pData,pData->paDataNear[i],NULL,5,0);
-		checkRect(pData,minDstRect,&minDstP,5,0);
-		dwTpMs=dwCurMs;dwTpDoneMs=0;TPtarget=minDstP;
-		RightSkillPos(minDstP.x,minDstP.y);return 1;
+		int curdisM256=disM256(&src,&dst);
+		if (curdisM256<5*256) return 1;
+		if (curdisM256<maxTpDisM256) {dwTpMs=dwCurMs;dwTpDoneMs=0;TPtarget=dst;RightSkillPos(dst.x,dst.y);return 1;}
+		resetMonsters();
+		maxDisM256=0x7FFFFFFF;nPos=0;
+		for (int i=0;i<pData->nearbyRectCount;i++) addPossiblePostions(pData,pData->paDataNear[i],NULL,5);
+		findValidPosition();
+		nPos=0;addPossiblePostions(pData,bestRect,&bestP,5);
+		findValidPosition();
+		dwTpMs=dwCurMs;dwTpDoneMs=0;TPtarget=bestP;
+		RightSkillPos(bestP.x,bestP.y);return 1;
 	}
 	for (int retries=0;retries<6;retries++) {
-		int r=doTeleport();
-		if (r) return r>1?1:0;
+		dstType=AutoTeleportGetTarget(&dst,&targetType,&targetTxt,&distanceLeftFromTarget);
+		//0:noTarget 1:continue 2:end 3:enter 4:forceEnter >=5:keep safe distance
+		if (!dstType) {startProcessMs=dwCurMs+200;return 1;}
+		if (dstType!=4) findMonsters();
+		else resetMonsters();
+		curdis=getDistanceM256(dst.x-src.x,dst.y-src.y)>>8;
+		if (curdis<reachDis&&dstType==3) {
+			enter(&src,targetType,targetTxt);startProcessMs=dwCurMs+300;return 0;
+		}
+		if (dstType>=5&&curdis<dstType) { //find safe place
+			return teleportToSafety()?0:1;
+		}
+		if (curdis<reachDis) { //reached
+			int monDis=getMonDis(&src);
+			if (monDis>=30) {
+				//if (tLogTP.isOn) LOG("reached dst=%d monDis=%d\n",curdis,monDis);
+				startProcessMs=dwCurMs+300;return 2;
+			} else {
+				return teleportToSafety()?0:1;
+			}
+		}
+		if (teleportForward()) return 0;
+		if (dstType<2) {
+			markNextPathInvalid(stepInvalidMs);
+			RerouteRectPath();
+			continue;
+		}
+		return teleportToSafety()?0:1;
 	}
 	return 0;
 }
