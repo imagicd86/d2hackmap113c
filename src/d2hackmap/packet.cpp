@@ -10,6 +10,7 @@ typedef unsigned int u32;
 
 extern ToggleVar tResetProtectionToggle;
 extern int dwTeamMemberCount;
+int dwSendPacketCount=0;
 void MonitorPacket();
 int DoTest();
 int 		dwSocketTimeOutSec=		100;
@@ -166,8 +167,7 @@ buf[0]: edx and esi
 50:0 51:0 52:0 53:0 54:0 55:0 56:0 57:0
 58:0 59:0 5a:0 5b:0 5c:0 5d:0 5e:0 5f:0
 60:0 61:0 62:0 63:0 64:0 65:0 66:0 67:6fb5f460
-68:6fb5f3f0 69:6fb5f390 6a:6fb5f340 6b:6fb5f7c0 6c:6fb5f750 6d:6fb5f2b0 6e:6fb5c
-3c0 6f:6fb5c3b0
+68:6fb5f3f0 69:6fb5f390 6a:6fb5f340 6b:6fb5f7c0 6c:6fb5f750 6d:6fb5f2b0 6e:6fb5c3c0 6f:6fb5c3b0
 70:6fb5c3a0 71:6fb5c390 72:6fb5c380 73:0 74:0 75:0 76:0 77:0
 78:0 79:0 7a:0 7b:0 7c:0 7d:0 7e:0 7f:0
 80:0 81:0 82:0 83:0 84:0 85:0 86:0 87:0
@@ -502,6 +502,7 @@ D2Net.dll+765B     - C2 0C00               - ret 000C { 12 }
 void __declspec(naked) GamePacketSendInterceptPatch_ASM()
 {
 	__asm {
+		inc dwSendPacketCount
 		mov eax, dword ptr [esp+0x10] //packet buf
 		cmp eax,0
 		je end
@@ -775,6 +776,7 @@ protect:
 	}
 }
 extern int fAutoSummonSwitchSkill,fAutoSummonSwitchSkillTmp;
+extern int dwUpdateQuestMs;
 int dwInteractEntityCount=0;
 void packetDebug() {
 }
@@ -837,6 +839,32 @@ int __cdecl blockSendPacket(int regs) {
 			}
 			break;
 		}
+		case 0x30: {//Terminate entity chat
+			int type=*(int *)&packet[1];
+			int id=*(int *)&packet[5];
+			if (id!=1) break;
+			UnitAny *pUnit=d2client_GetUnitFromId(id,type);
+			if (!pUnit) break;
+			switch (pUnit->dwTxtFileNo) {
+				case Mon_Jerhyn:if (QUESTDATA[0][14]==0x102D) dwUpdateQuestMs=dwCurMs+500;break;
+				case Mon_Meshif1:if (QUESTDATA[0][14]==0x1035) dwUpdateQuestMs=dwCurMs+500;break;
+			}
+			break;
+		}
+		case 0x38: {//Entity action
+			int action=*(int *)&packet[1];
+			int id=*(int *)&packet[5];
+			int param=*(int *)&packet[9];
+			UnitAny *pUnit=d2client_GetUnitFromId(id,1);
+			if (!pUnit) break;
+			gameMessage("Entity action txt=%d action=%d param=%d\n",pUnit->dwTxtFileNo,action,param);
+			switch (pUnit->dwTxtFileNo) {
+				case Mon_Larzuk:
+					if (action==0&&param==0x16c) dwUpdateQuestMs=dwCurMs+500; //socket
+					break;
+			}
+			break;
+		}
 		case 0x3B: {//add skill point
 			//int skill=*(WORD*)&packet[1];
 			dwSkillChangeCount++;
@@ -879,8 +907,10 @@ void initSendPacketCheckTable() {
 	sendPacketCheckTable[0x17]=1; //drop item
 	sendPacketCheckTable[0x20]=1; //active item
 	sendPacketCheckTable[0x21]=1; //stack items
+	sendPacketCheckTable[0x30]=1; //Terminate entity chat
 	sendPacketCheckTable[0x33]=1; //sell item
 	sendPacketCheckTable[0x36]=1; //hire merc
+	sendPacketCheckTable[0x38]=1; //Entity action
 	sendPacketCheckTable[0x3B]=1; //add skill point
 	sendPacketCheckTable[0x3C]=1; //select skill
 	sendPacketCheckTable[0x49]=1; //Take WP/Close WP

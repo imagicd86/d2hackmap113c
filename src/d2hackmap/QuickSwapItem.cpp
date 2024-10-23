@@ -91,19 +91,30 @@ void  MoveItem(D2MSG *pMsg ){
 	if ( invtype>0 ) {//×ó±ß¿ª
 		InventoryType *pInvType = (pMsg->xpos < SCREENSIZE.x/2) ? &invTypes[0] : &invTypes[invtype];
 		if (pInvType) {
+			int bottom=pInvType->bottom;
 			int left=pInvType->left;
 			int nx=pInvType->nGridXs;
 			int ny=pInvType->nGridYs;
 			SendMessage(pMsg->hwnd, WM_MOUSEMOVE, pMsg->wParam, MAKELONG(pInvType->left + dx, pInvType->bottom + dy));
-			if (*d2client_pCursorInvGridX == 2) {//10*10 big box
-				nx=10;ny=10;left-=2*pInvType->nGridWidth;
+			int gridX=*d2client_pCursorInvGridX;
+			int gridY=*d2client_pCursorInvGridY;
+			if (gridX) {nx+=gridX;left-=gridX*pInvType->nGridWidth;}
+			if (gridY) {ny+=gridY;bottom-=gridY*pInvType->nGridHeight;}
+			switch (invtype) {
+				case 1: //stash
+					if (gridX==2) {nx=10;ny=10;}
+					break;
+				case 2: //cube
+					if (gridX==4) {nx=10;ny=8;}
+					break;
 			}
-			//LOG("%d*%d\n",nx,ny);
+			if (gridX||gridY)
+				LOG("box %d (%d,%d) size %d*%d\n",invtype,gridX,gridY,nx,ny);
 			DWORD dwBoxType = d2common_GetBoxType(PLAYER, pInvType->invType, EXPANSION);
 			for (int x = 0; x < nx; ++x) {
 				for (int y = 0; y < ny; ++y) {
 					int xpos = left + x*pInvType->nGridWidth+dx;
-					int ypos = pInvType->bottom + y*pInvType->nGridHeight+dy;
+					int ypos = bottom + y*pInvType->nGridHeight+dy;
 					int gridcount = 0;
 					int itemcount = 0;
 					SendMessage(pMsg->hwnd, WM_MOUSEMOVE, pMsg->wParam, MAKELONG(xpos, ypos));

@@ -62,6 +62,7 @@ struct ToggleVar {
 		int (*funcUpInt)(int);
 		int (*funcUpPtr)(void *ptr);
 	};
+	wchar_t *wdesc;
 	struct ToggleVar *next; //Same key value
 };
 enum ConfigVarType {

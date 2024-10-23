@@ -537,21 +537,25 @@ Chu-Ko-Nu------------巧工弩---------8rx---173
 Demon-Crossbow-------恶魔十字弓-----6rx---276
 
 11.Staves-棍棒
-Short-Staff------短棍-----------sst---64
-Jo-Staff---------乔木棒---------8ss---157
-Walking-Stick----手杖-----------6ss---260
-Long-Staff-------长棍-----------lst---65
-Quarter-staff----六尺棍---------8ls---158
-Stalagmite-------钟乳石之杖-----6ls---261
-Gnarled-Staff----多节棍---------gst---66
-Cedar-Staff------杉木之棍-------8cs---159
-Elder-Staff------长老之杖-------6cs---262 L55 socket4 STR44 DEX37 (2hand)80-93 6cs Elder Staff
-Battle-Staff-----战斗法杖-------bst---67
-Gothic-Staff-----哥德之棍-------8bs---160
-Shillelagh-------树皮之杖-------6bs---263
-War-Staff--------巨战法杖-------wst---68
-Rune-Staff-------符文之棍-------8ws---161
-Archon-Staff-----执政官之杖-----6ws---264
+Short-Staff------短棍-----------sst---64 L0 socket2 speed-10 (2hand)1-5
+Jo-Staff---------乔木棒---------8ss---157 L18 socket2 speed-10 STR25 (2hand)6-21
+Walking-Stick----手杖-----------6ss---260 L43 socket2 speed-10 STR25 (2hand)69-85
+
+Long-Staff-------长棍-----------lst---65 L0 socket3 (2hand)2-8
+Quarter-staff----六尺棍---------8ls---158 L23 socket3 STR25 (2hand)8-26
+Stalagmite-------钟乳石之杖-----6ls---261 L49 socket3 speed10 STR63 DEX35 (2hand)75-107
+
+Gnarled-Staff----多节棍---------gst cst?---66 L0 socket4 speed10 (2hand)4-12
+Cedar-Staff------杉木之棍-------8cs---159 L25 socket4 speed10 STR25 (2hand)11-32
+Elder-Staff------长老之杖-------6cs---262 L55 socket4 STR44 DEX37 (2hand)80-93
+
+Battle-Staff-----战斗法杖-------bst---67 L0 socket4 (2hand)6-13
+Gothic-Staff-----哥德之棍-------8bs---160 L25 socket4 STR25 (2hand)14-34
+Shillelagh-------树皮之杖-------6bs---263 L62 socket4 STR52 DEX27 (2hand)65-108
+
+War-Staff--------巨战法杖-------wst---68 L0 socket6 speed20 (2hand)12-28
+Rune-Staff-------符文之棍-------8ws---161 L25 socket6 speed20 STR25 (2hand)24-58
+Archon-Staff-----执政官之杖-----6ws---264 L66 socket6 speed10 STR34 (2hand)83-99
 -
 12.Wands-法杖
 Wand-------------法杖--------wnd---11

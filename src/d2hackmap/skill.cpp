@@ -148,7 +148,6 @@ void AutoSkillNewGame() {
 	memset(&leftSkill,0,sizeof(struct AutoSkillInfo));memset(&rightSkill,0,sizeof(struct AutoSkillInfo));
 	dwAutoSkillReloading=0;dwSkillChangeCountVerify=-1;usingAutoSkill=0;
 }
-int AutoSkillNow() {fAutoSkillNow=1;checkAutoSkillStatus();return 0;}
 static int isAutoSkill(Skill *pSkill) {
 	int id=pSkill->pSkillInfo->wSkillId;
 	if (pSkill->pSkillInfo->flags3&0x30) return 0;//passive skill or aura
@@ -163,7 +162,7 @@ static int isAutoSkill(Skill *pSkill) {
 		case Skill_FireBolt:case Skill_FireBall:case Skill_Meteor:
 		case Skill_StaticField:case Skill_Nova:case Skill_Lightning:case Skill_ChainLightning:
 		case Skill_LifeTap:case Skill_Decrepify:case Skill_DimVision:case Skill_LowerResist:
-		case Skill_WarCry:
+		case Skill_WarCry:case Skill_Smite:
 			return 1;
 		default:
 			return 1;
@@ -239,6 +238,7 @@ static void updateSkill(struct AutoSkillInfo *info,int id) {
 		case Skill_BoneSpear:d=29;info->notImmune=37;break;//magic immune
 		case Skill_BoneSpirit:d=33;info->notImmune=37;break;//magic immune
 		case Skill_PoisonNova:d=10;info->notImmune=45;break;//poision immune
+		case Skill_Smite:d=20;info->notImmune=36;break;//physic immune
 	}
 	info->vdis2=(int)(d*d*9)>>2; //max valid distance^2
 	int d0=aAutoSkillDistance[id][0]; //user setting on closest monster
@@ -303,7 +303,13 @@ static int canUse(struct AutoSkillInfo *info) {
 	return 1;
 }
 int AutoTeleport();
+int AutoTeleportStart();
 int AutoTeleportEnd();
+int AutoSkillNow() {
+	if (!fAutoSkillNow&&dwRightSkill==Skill_Teleport) AutoTeleportStart();
+	fAutoSkillNow=1;checkAutoSkillStatus();return 0;
+}
+extern int dwBackToTownTimeout;
 void AutoSkillRunLoop() {
 	if (fAutoSkillNow&&!IsKeyDown(tAutoForegroundSkill.key)&&!IsKeyDown(tAutoForegroundSkill2.key)) {
 		fAutoSkillNow=0;checkAutoSkillStatus();
@@ -318,6 +324,7 @@ void AutoSkillRunLoop() {
 	if (fAutoSkillNow&&dwRightSkill==Skill_Teleport) {
 		if (!AutoTeleport()) return;
 	}
+	if (dwBackToTownTimeout) return;
 	if (dwCurMs<dwAutoSkillCheckMs) return;
 	if (dwAutoSkillReloading) {processStacking();dwAutoSkillCheckMs=dwCurMs+100;return;}
 	if (fPlayerInTown||fAutoFollowMoving) return;
@@ -381,12 +388,13 @@ loopend:
 		dwAutoSkillCheckMs=dwCurMs+dwAutoSkillCheckInterval;
 	}
 }
+int getMonsterOwnerId(int id);
 static void checkUnit(UnitAny *pMon) {
 	if (pMon->dwUnitType!=UNITNO_MONSTER) return;
 	if (pMon->dwMode==MonsterMode_Death) return; //dying?
 	if (pMon->dwMode==MonsterMode_Dead) return; //already dead
-	int owner = d2client_GetMonsterOwner(pMon->dwUnitId);
-	if (owner != -1) return; //玩家随从
+	int owner=getMonsterOwnerId(pMon->dwUnitId);
+	if (owner!=-1) return; //玩家随从
 	MonsterTxt *pMonTxt= pMon->pMonsterData->pMonsterTxt;
 	MonsterData *pMonsterData = pMon->pMonsterData;
 	int isActBoss=0,isBoss=0;

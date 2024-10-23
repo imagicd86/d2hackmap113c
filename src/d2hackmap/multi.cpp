@@ -250,6 +250,7 @@ void multiclient_recv_info(int info) {
 			int hwnd16=(info>>8)&0xFFFF;
 			int uid8=info&0xFF;
 			if (!pwin->hwnd
+				||gid>d2winLastId
 				||type==MCI_WinActiveL&&((int)pwin->hwnd&0xFFFF)!=hwnd16
 				||type==MCI_WinActiveL&&((int)pwin->uid&0xFF)!=uid8
 				||type==MCI_WinActiveH&&(((int)pwin->hwnd>>16)&0xFFFF)!=hwnd16

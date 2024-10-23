@@ -18,6 +18,7 @@ void SendChatMessageW(wchar_t *myMsg);
 void setKDCountDown(int en);
 void setKBCountDown(int team,int en);
 int dwQuestAlertMs;
+int dwUpdateQuestMs;
 static int alertCount;
 static BugQuestInfo aBugInfo[5] ;
 
@@ -29,6 +30,7 @@ ToggleVar tBugKD={TOGGLEVAR_ONOFF,	0,	-1,	1, "Bug KD Protect" , &ReSetTimer};
 ToggleVar tBugKB={TOGGLEVAR_ONOFF,	0,	-1,	1, "Bug KB Protect" , &ReSetTimer};
 ToggleVar tBugAutoQuit={TOGGLEVAR_ONOFF,	1,	-1,	1, "Bug Auto Quit Toggle"	,&ReSetTimer};
 ToggleVar tBugAutoQuitHell={TOGGLEVAR_ONOFF,	1,	-1,	1, "Bug Auto Quit Toggle(Hell)"	,&ReSetTimer};
+ToggleVar tBugAutoQuitHellAct3={TOGGLEVAR_ONOFF,	1,	-1,	1, "Bug Auto Quit Toggle(HellAct3)"	,&ReSetTimer};
 ToggleVar tBugAutoQuitHellAct4={TOGGLEVAR_ONOFF,	1,	-1,	1, "Bug Auto Quit Toggle(HellAct4)"	,&ReSetTimer};
 ToggleVar tBugAutoQuitHellAct5={TOGGLEVAR_ONOFF,	1,	-1,	1, "Bug Auto Quit Toggle(HellAct5)"	,&ReSetTimer};
 ToggleVar tBugAllHellAlert={TOGGLEVAR_ONOFF,	0,	-1,	1, "Bug All Hell Aert Toggle(Hell)"	,&ReSetTimer};
@@ -40,6 +42,7 @@ static ConfigVar aConfigVars[] = {
   {CONFIG_VAR_TYPE_KEY, "BugKBToggle",          &tBugKB         },
   {CONFIG_VAR_TYPE_KEY, "BugAutoQuitToggle",    &tBugAutoQuit   },
   {CONFIG_VAR_TYPE_KEY, "BugAutoQuitHellToggle",    &tBugAutoQuitHell   },
+  {CONFIG_VAR_TYPE_KEY, "BugAutoQuitHellAct3Toggle",    &tBugAutoQuitHellAct3   },
   {CONFIG_VAR_TYPE_KEY, "BugAutoQuitHellAct4Toggle",    &tBugAutoQuitHellAct4   },
   {CONFIG_VAR_TYPE_KEY, "BugAutoQuitHellAct5Toggle",    &tBugAutoQuitHellAct5   },
   {CONFIG_VAR_TYPE_KEY, "BugAllHellAlertToggle",    &tBugAllHellAlert   },
@@ -89,17 +92,37 @@ void QuestNewLevel() {
 	} else if (dwCurrentLevel==74) {
 		checkQuest(13,1,0x8000,"Summoner");
 	} else if (dwCurrentLevel==46||66<=dwCurrentLevel&&dwCurrentLevel<=72) {
-		checkQuest(14,1,0x8000,"Duriel");
-		if (!(GAMEQUESTDATA[0][14]&0x8000)&&(QUESTDATA[0][14]&1)) { //game not done, player done
+		if (tBugAllHellAlert.isOn&&DIFFICULTY==2) checkQuest(14,1,0x8000,"Duriel");
+		unsigned short *player=*QUESTDATA;
+		unsigned short *game=*GAMEQUESTDATA;
+		if ((!(game[14]&0x8000))&&(player[14]&1)) { //game not done, player done
 			//use key to pass ACT2
+			//102D->1035->1025
+			//Q23 A000 Q24 A000 Q25 8000
 			if (QUESTDATA[0][14]&0x18) { //player not reset
-				d2client_ShowGameMessage(L"Quest not reset yet,talk to Jerhyn and Meshif first", 1); //red
+				d2client_ShowGameMessage(
+					dwGameLng?L"需先找杰海因和马席夫完成任务,否则需小号自己能进去才能过关。"
+					:L"Last quest not done,talk to Jerhyn and Meshif first", 1); //red
 			} else {
-				d2client_ShowGameMessage(L"Quest is already reset", 2); //green
+				d2client_ShowGameMessage(dwGameLng?L"都瑞尔任务已重置":L"Quest reseted", 2); //green
 			}
 		}
 	} else if (dwCurrentLevel==101||dwCurrentLevel==102) {
 		checkQuest(22,1,0x8000,"Mephisto");
+		if (aBugInfo[2].fEnable&&*aBugInfo[2].fEnable&&aBugInfo[2].nStatus&&aBugInfo[2].nType==2) {
+			char buf[32];char *name="BugKM";
+			wchar_t *fmt=dwGameLng?L"非%hs游戏,稍后将自动退出,按%hs取消保护"
+				:L"Not %s game, will quit later, press %s to disable protection";
+			if (tBugAutoQuit.isOn) {
+				formatKey(buf,tBugAutoQuit.key);gameMessageW(fmt,name,buf);
+			}
+			if (DIFFICULTY==2&&tBugAutoQuitHell.isOn) {
+				formatKey(buf,tBugAutoQuitHell.key);gameMessageW(fmt,name,buf);
+			}
+			if (DIFFICULTY==2&&ACTNO==2&&tBugAutoQuitHellAct3.isOn) {
+				formatKey(buf,tBugAutoQuitHellAct3.key);gameMessageW(fmt,name,buf);
+			}
+		}
 	} else if (dwCurrentLevel==105||dwCurrentLevel==106) {
 		checkQuest(25,1,0x8000,"Izual");
 	} else if (dwCurrentLevel==107) {
@@ -108,17 +131,16 @@ void QuestNewLevel() {
 		checkQuest(26,1,0x8000,"Diablo");
 		if (aBugInfo[3].fEnable&&*aBugInfo[3].fEnable&&aBugInfo[3].nStatus&&aBugInfo[3].nType==2) {
 			char buf[32];char *name="BugKD";
+			wchar_t *fmt=dwGameLng?L"非%hs游戏,稍后将自动退出,按%hs取消保护"
+				:L"Not %s game, will quit later, press %s to disable protection";
 			if (tBugAutoQuit.isOn) {
-				formatKey(buf,tBugAutoQuit.key);
-				gameMessage("Not %s game, will quit later, press %s to disable protection",name,buf);
+				formatKey(buf,tBugAutoQuit.key);gameMessageW(fmt,name,buf);
 			}
 			if (DIFFICULTY==2&&tBugAutoQuitHell.isOn) {
-				formatKey(buf,tBugAutoQuitHell.key);
-				gameMessage("Not %s game, will quit later, press %s to disable protection",name,buf);
+				formatKey(buf,tBugAutoQuitHell.key);gameMessageW(fmt,name,buf);
 			}
 			if (DIFFICULTY==2&&ACTNO==3&&tBugAutoQuitHellAct4.isOn) {
-				formatKey(buf,tBugAutoQuitHellAct4.key);
-				gameMessage("Not %s game, will quit later, press %s to disable protection",name,buf);
+				formatKey(buf,tBugAutoQuitHellAct4.key);gameMessageW(fmt,name,buf);
 			}
 		}
 	} else if (122<=dwCurrentLevel&&dwCurrentLevel<=124) {
@@ -183,15 +205,18 @@ void QuestNewGame() {
 	}
 	ReSetTimer();
 }
-void QuestRunLoop() { 
+static void questAlert() {
 	wchar_t wszTemp[512];
-	if (aBugInfo[ACTNO].nStatus==0) return ;
-	if (!aBugInfo[ACTNO].fEnable||!(*aBugInfo[ACTNO].fEnable)) return;
-	if (aBugInfo[ACTNO].nStatus == 1 && aBugInfo[ACTNO].nType==2) return;
-	if (!dwQuestAlertMs||dwCurMs<dwQuestAlertMs) return;
+	if (aBugInfo[ACTNO].nStatus==0
+		||!aBugInfo[ACTNO].fEnable||!(*aBugInfo[ACTNO].fEnable)
+		||aBugInfo[ACTNO].nStatus==1&&aBugInfo[ACTNO].nType==2) {
+		dwQuestAlertMs=0;
+		return;
+	}
 	if (alertCount<=0) {
 		if (tBugAutoQuit.isOn
 			||DIFFICULTY==2&&tBugAutoQuitHell.isOn
+			||DIFFICULTY==2&&ACTNO==2&&tBugAutoQuitHellAct3.isOn
 			||DIFFICULTY==2&&ACTNO==3&&tBugAutoQuitHellAct4.isOn
 			||DIFFICULTY==2&&ACTNO==4&&tBugAutoQuitHellAct5.isOn) {
 			if (tQuickNextGame.key!=0&&tQuickNextGame.key!=(BYTE)-1) {
@@ -216,6 +241,13 @@ void QuestRunLoop() {
 		SetBottomAlertMsg1(wszTemp,1000,1,1);
 	}
 	dwQuestAlertMs=dwCurMs+1000;alertCount--;
+}
+void QuestRunLoop() { 
+	if (dwQuestAlertMs&&dwCurMs>=dwQuestAlertMs) questAlert();
+	if (dwUpdateQuestMs&&dwCurMs>=dwUpdateQuestMs) {
+		dwUpdateQuestMs=0;
+		BYTE packet[1]={0x40};SendPacket(packet,1);
+	}
 }
 
 void __fastcall BugKDProtect(DWORD param2 ) {
@@ -334,6 +366,7 @@ Q52
 	5D 20 20 02 05 00 //rescue 10
 	5D 20 00 05 05 00 //rescue 15
 	5D 20 00 03 00 00 //rescue 15
+	5D 20 02 00 00 00 //got runes quest code 202A, update quest->3001
 	*/
 	switch (aPacket[1]) {
 		case 0x05:
@@ -353,8 +386,11 @@ Q52
 			break;
 		case 0x06:
 			if (aPacket[2] == 0x00) {
-				if (aPacket[3]==0x03)
+				if (aPacket[3]==0x03) {
 					d2client_ShowGameMessage(L"Andariel is dead", 2);
+					//talk to Warriv txt=155 action=0 param=40
+	//00: 38 00 00 00 - 00 0a 00 00 - 00 28 00 00 - 00          |8        (      
+				}
 			}
 			break;
 		case 0x14:
@@ -372,13 +408,18 @@ Q52
 			}
 			break;
 		case 0x20:
-			if (aPacket[1]==0x20&&aPacket[2]==0x20) {
-				if (aPacket[3]==0x02) {
-					wsprintfW(wszbuf, L"Q52: %d barbrian to rescue",aPacket[4]);
-					d2client_ShowPartyMessage(wszbuf, 2);
-				} else if (aPacket[3]==0x03) {
-					d2client_ShowPartyMessage(L"Q52: All barbrian rescued",2);
-				}
+			switch (aPacket[1]) {
+				case 0x20:
+					if (aPacket[2]==0x20) {
+						if (aPacket[3]==0x02) {
+							wsprintfW(wszbuf, L"Q52: %d barbrian to rescue",aPacket[4]);
+							d2client_ShowPartyMessage(wszbuf, 2);
+						} else if (aPacket[3]==0x03) {
+							d2client_ShowPartyMessage(L"Q52: All barbrian rescued",2);
+						}
+					}
+					break;
+				case 2:dwUpdateQuestMs=dwCurMs+500;break;
 			}
 			break;
 		case 0x24:
@@ -435,7 +476,7 @@ void CheckUnitKM(){
 			return ;
 		}
 		for (RosterUnit *pUnit = PLAYERLIST; pUnit; pUnit = pUnit->pNext ) {
-			if ( pUnit->dwLevelNo== 102 && TestPvpFlag( pUnit->dwUnitId , dwPlayerId )>=2) {
+			if (pUnit->dwLevelNo==102&&testPvpFlag(pUnit->dwUnitId)>=2) {
 				aBugInfo[2].nStatus = 2 ;
 				alertCount=dwBugAlertTimes;dwQuestAlertMs=dwCurMs;
 				return ;

@@ -2,6 +2,7 @@
 #include "map.h"
 #include "d2ptrs.h"
 
+int getMonsterOwnerId(int id);
 BYTE GetItemColour(UnitAny *pItem,int arridx);
 void AutoMapRoute();
 void AutoRouteDrawMinimapPath();
@@ -99,6 +100,7 @@ ToggleVar 	tScreenScrollKeys[16]	={ 	   {0}};
 int 			dwScreenScrollOffset[16][2]={ {0}};
 ToggleVar tMiniMapScrollKeys[16]={ 0};
 int 			dwMiniMapScrollOffset[16][2]={ 0};
+int dwDuranceOfHateLevel3TeleportShift[2];
 static ConfigVar aConfigVars[] = {
 	{CONFIG_VAR_TYPE_KEY, "RevealActAutomapKey",      &tRevealAct       },
 	{CONFIG_VAR_TYPE_KEY, "RevealLevelAutomapKey",    &tRevealLevel     },
@@ -209,6 +211,8 @@ static ConfigVar aConfigVars[] = {
   {CONFIG_VAR_TYPE_SCREEN_SCROLL, "ScreenScrollOffset",  0, },
   {CONFIG_VAR_TYPE_INT, "RescueBarDx",&dwRescueBarDx      , 4 },
   {CONFIG_VAR_TYPE_INT, "RescueBarDy",&dwRescueBarDy      , 4 },
+  {CONFIG_VAR_TYPE_INT_ARRAY1, "DuranceOfHateLevel3TeleportShift",&dwDuranceOfHateLevel3TeleportShift,2,{0}},
+
 };
 void automap_addConfigVars() {
 	for (int i=0;i<_ARRAYSIZE(aConfigVars);i++) addConfigVar(&aConfigVars[i]);
@@ -466,6 +470,18 @@ static void modifySealTarget() {
 		}
 	}
 }
+static void modifyTeleportTarget() {
+	MinimapLevel *pMapLevel=&minimapLevels[Level_DuranceofHateLevel3];if (!pMapLevel->targets) return;
+	for (MinimapLevelTarget *pTarget=pMapLevel->targets;pTarget;pTarget=pTarget->next) {
+		if (pTarget->dstLvl==339) {
+				pTarget->p.unitX+=dwDuranceOfHateLevel3TeleportShift[0];
+				pTarget->p.unitY+=dwDuranceOfHateLevel3TeleportShift[1];
+				pTarget->ready|=2;
+				pTarget->p.drawX=(pTarget->p.unitX-pTarget->p.unitY)*16;
+				pTarget->p.drawY=(pTarget->p.unitX+pTarget->p.unitY)*8;
+		}
+	}
+}
 CellFile *bitmap2dc6(BYTE *pixels, int width, int height) {
 	BYTE *outbuf = new BYTE[(width*height*2)+height], *dest = outbuf;
 	int len_row=width&3?(width+3)&0xFFFFFFFC:width;
@@ -589,6 +605,7 @@ void RevealAutomapLevel(DrlgLevel *pDrlgLevel,int mode) {
 	switch (pDrlgLevel->dwLevelNo) {
 		case Level_FrigidHighlands: modifyRescueBarTarget();break;
 		case Level_ChaosSanctuary: modifySealTarget();break;
+		case Level_DuranceofHateLevel3: modifyTeleportTarget();break;
 	}
 	LOG("RevealAutomapLevel %d mode=%d time=%d ms\n",pDrlgLevel->dwLevelNo,mode,GetTickCount()-ms);
 	if (pDrlgLevel->dwLevelNo==dwCurrentLevel) {updateTargetName();AutoMapRoute();}
@@ -799,7 +816,7 @@ void __declspec(naked) DrawPartyPlayerBlobPatch_ASM() {
 	}
 }
 BYTE __fastcall HostilePlayerPatch(UnitAny *pUnit) {
-	return TestPvpFlag( pUnit->dwUnitId  , dwPlayerId)==0?nHostilePlayerColor:nNeutralPlayerColor;
+	return testPvpFlag(pUnit->dwUnitId)==0?nHostilePlayerColor:nNeutralPlayerColor;
 }
 void __declspec(naked) HostilePlayerColor_ASM() {
 	__asm {
@@ -811,7 +828,7 @@ void __declspec(naked) HostilePlayerColor_ASM() {
 }
 BYTE __fastcall DrawPlayerTextPatch(UnitAny *pUnit) {
 	if (pUnit->dwMode==17) return 1;
-	BYTE fPvPflag = TestPvpFlag( pUnit->dwUnitId , dwPlayerId );
+	BYTE fPvPflag = testPvpFlag(pUnit->dwUnitId);
 	if ( fPvPflag==2 ) return nPartyTextColour;
 	return fPvPflag==0?nHostileTextColour:nNeutralTextColour;
 }
@@ -829,7 +846,7 @@ void __declspec(naked) DrawPlayerTextPatch_ASM() {
 	}
 }
 void __fastcall MonsterBlobDesc( UnitAny *pMon ){
-	if (pMon->dwMode && pMon->dwMode!=0x0C && d2client_GetMonsterOwner(pMon->dwUnitId)==-1){
+	if (pMon->dwMode && pMon->dwMode!=0x0C && getMonsterOwnerId(pMon->dwUnitId)==-1){
 		wchar_t temp[1024];
 		memset(temp, L'\0' , sizeof(temp));
 		MonsterData *pMonsterData = pMon->pMonsterData;
@@ -893,22 +910,23 @@ void __declspec(naked) MonsterBlobDescPatch_ASM() {
 }
 BYTE __fastcall MonsterBlobCol(UnitAny *pMon) {
 	if ( tAutomapMonsters.isOn ) {
-		int dwOwnerId = d2client_GetMonsterOwner(pMon->dwUnitId);
+		int dwOwnerId=getMonsterOwnerId(pMon->dwUnitId);
 		BYTE color=anMonsterColours[pMon->dwTxtFileNo];
 		if (color != (BYTE)-1) return color;
 		if (dwOwnerId!=-1) {
-			BYTE fPvpFlag = TestPvpFlag( dwOwnerId , dwPlayerId );
+			BYTE fPvpFlag = testPvpFlag(dwOwnerId);
 			//队伍中，自己的显示0xcb 队友的0x81
-			if ( fPvpFlag==2 )return nFriendMinionColor;
-			if ( fPvpFlag==3 )return nPlayerMinionColor;
-			return fPvpFlag==0?nHostilePlayerColor:nNeutralPlayerColor;
+			switch (fPvpFlag) {
+				case 2:return nFriendMinionColor;
+				case 3:return nPlayerMinionColor;
+				case 0:return nHostilePlayerColor;
+				default:return nNeutralPlayerColor;
+			}
 		}
-		
 		if (pMon->pMonsterData->fChamp ) return nMonsterChampColor;
 		if (pMon->pMonsterData->fMinion ) return nMonsterMinionColor;
-		if (pMon->pMonsterData->fBoss) 
-		{
-			if ( pMon->pMonsterData->fUnique && nSuperUniqueColor!=(BYTE)-1)
+		if (pMon->pMonsterData->fBoss) {
+			if (pMon->pMonsterData->fUnique && nSuperUniqueColor!=(BYTE)-1)
 				return nSuperUniqueColor;
 			else
 				return nMonsterBossColor;
@@ -968,10 +986,10 @@ BYTE __fastcall MissileBlobCol(UnitAny *pMissile){
 			if ( pMissile->dwOwnerType == UNITNO_PLAYER ){
 				dwOwnerId =  pMissile->dwOwnerId;
 			}else if ( pMissile->dwOwnerType ==UNITNO_MONSTER ){
-				dwOwnerId =  d2client_GetMonsterOwner(pMissile->dwOwnerId);
+				dwOwnerId =  getMonsterOwnerId(pMissile->dwOwnerId);
 			}
 			if ( (int)dwOwnerId > 0 ) {
-				BYTE fPvPFlag = TestPvpFlag( dwOwnerId ,dwPlayerId );
+				BYTE fPvPFlag = testPvpFlag(dwOwnerId);
 				if ( fPvPFlag > 0 )return nTracerMissileColor;
 				if ( fPvPFlag ==0 ) {
 					return (pMissile->pMonPath->pTargetUnit == PLAYER) ? nGuidedMissileColor : nHostileMissileColor;
@@ -1094,21 +1112,6 @@ int AddRectToMinimap(AreaRectInfo *pInfo,int revealed) {
 		int needHide=0;
 		if (!pNInfo->pAreaRectData) {mapReveal(pNInfo);needHide=1;}
 		int add=1;
-		/*if (dstLvl==26) {//Monastery Gate
-			add=0;
-			LOG("(%d,%d):",pNInfo->tileX,pNInfo->tileY);
-			for (PresetUnit *pUnit=pNInfo->pPresetUnits;pUnit;pUnit=pUnit->pNext) {
-				LOG("(%d:%d)",pUnit->dwUnitType,pUnit->dwTxtFileNo);
-				switch (pUnit->dwUnitType) {
-					case UNITNO_OBJECT: 
-						switch(pUnit->dwTxtFileNo) {
-							case 456:add=1;break;
-						}
-						break;
-				}
-			}
-			LOG("\n");
-		}*/
 		if (add) d2client_AddAreaRectToMinimap(pNInfo->pAreaRectData, 1, LAYER);
 		if (needHide) mapHide(pNInfo);
 		if (add) {
@@ -1123,19 +1126,20 @@ int AddRectToMinimap(AreaRectInfo *pInfo,int revealed) {
 	}
 	int incTargetId=0;
 	for (PresetUnit *pUnit=pInfo->pPresetUnits;pUnit;pUnit=pUnit->pNext) {
-		int fAddCell=0,fAddLine=0,cellno=0,xoffset=0,yoffset=0;
+		int fAddCell=0,fAddLine=0,fReveal=0,cellno=0,xoffset=0,yoffset=0;
 		switch (pUnit->dwUnitType) {
 			case UNITNO_MONSTER: 
 				switch (pUnit->dwTxtFileNo) {
 				case 256:cellno=300;fAddCell=1;fAddLine=1;break;//izual
-				case 434:cellno=minimapTargetId;incTargetId=1;fAddCell=0;fAddLine=1;break;//prison door
+				case 434:cellno=minimapTargetId;incTargetId=1;fAddCell=0;fReveal=1;fAddLine=1;break;//prison door
 				}
 				break;
 			case UNITNO_OBJECT: {
 					fAddCell=1;fAddLine=1;
 					int levelno = pInfo->pDrlgLevel->dwLevelNo;
 					switch(pUnit->dwTxtFileNo) {
-						case 397:cellno=318;fAddLine=0;break;//chests
+						case 268:cellno=3000;fAddCell=0;break;//Wirt's Leg
+						case 397:cellno=318;fAddLine=1;break;//chests
 						case 371:cellno=1472;fAddCell=0;break;//countess chest
 						case 152:cellno=300;break;//orifice
 						case 460:cellno=1468;break;//drehya = frozen anya
@@ -1197,6 +1201,8 @@ int AddRectToMinimap(AreaRectInfo *pInfo,int revealed) {
 				pCell->drawXDiv10 = (WORD)(drawX/10+1+xoffset);
 				pCell->drawYDiv10 = (WORD)(drawY/10-3+yoffset);
 				d2client_AddAutomapNode(pCell, &LAYER->pObjects);
+			} else if (fReveal) {
+				if (!revealed) {revealed=1;d2client_AddAreaRectToMinimap(pInfo->pAreaRectData, 1, LAYER);}
 			}
 			if(fAddLine) {
 				if (cellno<0) cellno=-cellno;

@@ -1,0 +1,176 @@
+D2gfx.Ordinal10040 flushFramebuf
+6FA8ADD0 - A1 6812A96F           - mov eax,[6FA91268] { (6F87B908) }
+6FA8ADD5 - FF 50 1C              - call dword ptr [eax+1C] RtlLeaveCriticalSection of 6f87cab0
+6FA8ADD8 - 8B 0D 6812A96F        - mov ecx,[6FA91268] { (6F87B908) }
+6FA8ADDE - FF 51 20              - call dword ptr [ecx+20] <-------- put things to screen
+6FA8ADE1 - B8 01000000           - mov eax,00000001 { 1 }
+6FA8ADE6 - C3                    - ret 
+
+D2gfx.Ordinal10085 clearFramebuf
+6FA8ADF0 - 8B 44 24 10           - mov eax,[esp+10]
+6FA8ADF4 - 8B 4C 24 0C           - mov ecx,[esp+0C]
+6FA8ADF8 - 8A 54 24 08           - mov dl,[esp+08]
+6FA8ADFC - 50                    - push eax
+6FA8ADFD - A1 6812A96F           - mov eax,[6FA91268] { (6F87B908) }
+6FA8AE02 - 51                    - push ecx
+6FA8AE03 - 8B 4C 24 0C           - mov ecx,[esp+0C]
+6FA8AE07 - FF 50 18              - call dword ptr [eax+18] clear framebuf
+6FA8AE0A - C2 1000               - ret 0010 { 16 }
+
+6F87B908:
+00:6F876E80 ret
+04:6F876E40 InitializeCriticalSection of 6f87cab0
+08:6F876E00 DeleteCriticalSection of 6f87cab0
+0C:6F8770C0 CreatePalette CreateFont
+10:6F877080 DeleteObject
+14:6F876C50 
+18:6F877180 EnterCriticalSection of 6f87cab0 and clear framebuf
+1C:6F876C10 LeaveCriticalSection of 6f87cab0
+20:6F876B40 write framebuf to client area
+24:6F877010 28:6F876AC0 2C:6F876990 no
+30:6F876980 34:6F876CC0 38:6F876CB0 3C:6F876CA0 no
+40:6F877D10 44:6F877BD0 48:6F877B80 4C:6F876970 no
+50:6F876AB0 54:6F876A10 58:6F876A00 5C:6F8769F0 no
+60:6F8769D0 64:6F8769C0 68:6F8769B0 6C:6F8769A0 no
+70:6F876A50 by 10061 6fa8b120 can't see difference
+74:6F876A30 78:6F8769E0 no
+7C:6F877F30 by 10076 6FA87C80 9 args draw ground
+80:6F8766D0 no
+84:6F8765E0 DrawCellFile
+88:6F8764D0 drawText
+8C:6F876420 FillOrb
+90:6F876360 drawShadow
+94:6F876220 ret
+98:6F876830 DrawAutomapCell
+9C:6F875E50 by 10001 6FA8BB50 can't see difference
+A0:6F875F70 not call
+A4:6F8760A0 not call 
+A8:6F8776D0 not call
+AC:6F877600 not call
+B0:6F877230 not call
+B4:6F8775B0 not call
+B8:6F877920 DrawRectangle
+BC:6F877AC0 not call
+C0:6F8777B0 DrawLine 
+C4:6F877580 not call
+C8:6F877FB0 not call
+CC:6F877FA0 ret
+D0:6F8761C0 D4:6F876DF0 no
+
+D2Gdi.Ordinal10001+210 
+6F876B40 - A1 78C6876F           - mov eax,[6F87C678] { (1901076) } <-hwnd1
+6F876B45 - 83 EC 10              - sub esp,10 { 16 }
+6F876B48 - 56                    - push esi
+6F876B49 - 57                    - push edi
+6F876B4A - 50                    - push eax <-hwnd1
+6F876B4B - FF 15 9091876F        - call dword ptr [6F879190] { ->77D186C7 USER32.GetDC}
+	HDC GetDC([in] HWND hWnd);
+6F876B51 - 8B F0                 - mov esi,eax
+6F876B53 - 56                    - push esi <-hdc1
+6F876B54 - FF 15 8490876F        - call dword ptr [6F879084] { ->77EF5FE0 GDI32.CreateCompatibleDC}
+	HDC CreateCompatibleDC([in] HDC hdc);
+6F876B5A - 8B 0D 8CCA876F        - mov ecx,[6F87CA8C] { (0E050A1A) } <-object
+6F876B60 - 8B F8                 - mov edi,eax <-hdc2
+6F876B62 - 51                    - push ecx <-object
+6F876B63 - 57                    - push edi <-hdc2
+6F876B64 - FF 15 8090876F        - call dword ptr [6F879080] { ->GDI32.SelectObject }
+	HGDIOBJ SelectObject([in] HDC     hdc, [in] HGDIOBJ h);
+6F876B6A - 68 50C1876F           - push 6F87C150 { (0) }
+6F876B6F - 68 00010000           - push 00000100 { 256 }
+6F876B74 - 6A 00                 - push 00 { 0 }
+6F876B76 - 57                    - push edi <-hdc2
+6F876B77 - FF 15 5090876F        - call dword ptr [6F879050] { ->77F0C703 GDI32.SetDIBColorTable}
+	UINT SetDIBColorTable([in] HDC hdc,[in] UINT iStart,[in] UINT cEntries,[in] const RGBQUAD *prgbq);
+	typedef struct tagRGBQUAD {
+		BYTE rgbBlue;
+		BYTE rgbGreen;
+		BYTE rgbRed;
+		BYTE rgbReserved;
+	} RGBQUAD;
+6F876B7D - 8B 15 84CA876F        - mov edx,[6F87CA84] { (84412965) }
+6F876B83 - 6A 00                 - push 00 { 0 }
+6F876B85 - 52                    - push edx <-pal 7F08079B 
+6F876B86 - 56                    - push esi <-hdc1
+6F876B87 - FF 15 6090876F        - call dword ptr [6F879060] { ->77EF8632 GDI32.SelectPalette}
+	HPALETTE SelectPalette([in] HDC hdc,[in] HPALETTE hPal,[in] BOOL bForceBkgd);
+6F876B8D - 56                    - push esi <-hdc1
+6F876B8E - FF 15 5C90876F        - call dword ptr [6F87905C] { ->77EFEA4B GDI32.RealizePalette }
+	UINT RealizePalette([in] HDC hdc);
+6F876B94 - 8D 44 24 08           - lea eax,[esp+08] <-crect
+6F876B98 - 50                    - push eax <-lpRect
+6F876B99 - E8 A2F2FFFF           - call 6F875E40 { ->->6FA87FB0 D2gfx.Ordinal10048} D2GetHwnd()
+	D2gfx.Ordinal10048 6FA87FB0 - A1 6412A96F           - mov eax,[6FA91264] 
+6F876B9E - 50                    - push eax <-hwnd2
+6F876B9F - FF 15 8891876F        - call dword ptr [6F879188] { ->77D2908E USER32.GetClientRect}
+	BOOL GetClientRect([in]  HWND   hWnd,[out] LPRECT lpRect);
+	typedef struct tagRECT {+8 LONG left;+c LONG top;+10 LONG right;+14 LONG bottom;}
+6F876BA5 - 8B 0D 90CA876F        - mov ecx,[6F87CA90] { (600) } <-fb_h
+6F876BAB - 8B 15 80CA876F        - mov edx,[6F87CA80] { (800) } <-fb_w
+6F876BB1 - 8B 44 24 14           - mov eax,[esp+14] <-crect.bottom
+6F876BB5 - 68 2000CC00           - push 00CC0020 { 13369376 } <-rop SRCCOPY Copies the source rectangle directly to the destination rectangle. 
+6F876BBA - 51                    - push ecx <-fb_h
+6F876BBB - 8B 4C 24 18           - mov ecx,[esp+18] <-crect.right
+6F876BBF - 52                    - push edx <-fb_w
+6F876BC0 - 8B 54 24 18           - mov edx,[esp+18] <-crect.top
+6F876BC4 - 6A 00                 - push 00 { 0 } <-y
+6F876BC6 - 6A 00                 - push 00 { 0 } <-x
+6F876BC8 - 57                    - push edi <-src hdc2
+6F876BC9 - 2B C2                 - sub eax,edx <-crect.bottom-crect.top
+6F876BCB - 8B 54 24 20           - mov edx,[esp+20] <-crect.left
+6F876BCF - 50                    - push eax <-h=crect.bottom-crect.top
+6F876BD0 - 2B CA                 - sub ecx,edx <-crect.right-crect.left
+6F876BD2 - 51                    - push ecx <-w=crect.right-crect.left
+6F876BD3 - 6A 00                 - push 00 { 0 } <-y
+6F876BD5 - 6A 00                 - push 00 { 0 } <-x
+6F876BD7 - 56                    - push esi <-dst <-hdc1
+6F876BD8 - FF 15 4C90876F        - call dword ptr [6F87904C] { ->77EFB6C0 GDI32.StretchBlt} <--- put to screen
+BOOL StretchBlt([in] HDC   hdcDest,[in] int   xDest,[in] int   yDest,[in] int   wDest,[in] int   hDest,
+  [in] HDC   hdcSrc,[in] int   xSrc,[in] int   ySrc,[in] int   wSrc,[in] int   hSrc, [in] DWORD rop);
+rop:BLACKNESS(0x42:fill index 0) WHITENESS(0xFF0062:fill index 1)
+6F876BDE - FF 15 5490876F        - call dword ptr [6F879054] { ->77EF5985 GDI32.GdiFlush}
+	BOOL GdiFlush();
+6F876BE4 - 57                    - push edi
+6F876BE5 - FF 15 6C90876F        - call dword ptr [6F87906C] { ->77EF6E5F GDI32.DeleteDC}
+	BOOL DeleteDC([in] HDC hdc);
+6F876BEB - 8B 15 78C6876F        - mov edx,[6F87C678] { (1901076) }
+6F876BF1 - 56                    - push esi
+6F876BF2 - 52                    - push edx
+6F876BF3 - FF 15 9891876F        - call dword ptr [6F879198] { ->77D1869D USER32.ReleaseDC}
+	int ReleaseDC([in] HWND hWnd,[in] HDC  hDC);
+6F876BF9 - 5F                    - pop edi
+6F876BFA - B8 01000000           - mov eax,00000001 { 1 }
+6F876BFF - 5E                    - pop esi
+6F876C00 - 83 C4 10              - add esp,10 { 16 }
+6F876C03 - C3                    - ret 
+
+	int w=r4(handle,0x6FB8BC48);
+	int h=r4(handle,0x6FB8BC4C);
+	int framebuf=r4(handle,0x6F87CAA8);
+HGDIOBJ  6F87CA8C
+HWND hwnd1=*(HWND *)0x6F87C678;
+HDC hdc1=GetDC(hwnd1);
+HDC hdc2=CreateCompatibleDC(hdc1);
+HGDIOBJ obj=*(HGDIOBJ *)0x6F87CA8C;
+SelectObject(hdc2,obj);
+SetDIBColorTable(hdc2,0,256,0x6F87C150);
+HPALETTE pal=*(HPALETTE *)0x6F87CA84;
+SelectPalette(hdc1,pal,0);
+RealizePalette(hdc1);
+HWND hwnd2=D2GetHwnd();
+RECT crect;
+int fb_h=*(int *)0x6F87CA90;
+int fb_w=*(int *)0x6F87CA80;
+GetClientRect(hwnd2,&crect);
+StretchBlt(hdc1,0,0,crect.right-crect.left,crect.bottom-crect.top,
+	hdc2,0,0,fb_w,fb_h,SRCCOPY(0x00CC0020));
+GdiFlush();
+DeleteDC(hdc2);
+ReleaseDC(hwnd1,hdc1);
+return 1;
+
+
+6F876DB6 - FF 15 8890876F        - call dword ptr [6F879088] { ->77EF9E09 GDI32.CreateDIBSection }
+HDC hdc=GetDC(0);
+HGDIOBJ obj=CreateDIBSection(hdc,info,0,&framebuf,0,0);
+ReleaseDC(0,hdc);
+*(int *)0x6F87CA8C=obj;

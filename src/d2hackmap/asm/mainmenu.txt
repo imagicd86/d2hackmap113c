@@ -1,0 +1,214 @@
+6FA8ADD0 - A1 6812A96F           - mov eax,[6FA91268] { (6F87B908) }
+
+6F8F87E0 - 83 EC 50              - sub esp,50 { 80 }
+6F8F87E3 - E8 10F0FEFF           - call 6F8E77F8 { ->->6FA888B0 D2gfx.Ordinal10043}
+	6FA888B0 - E8 0BFCFFFF           - call 6FA884C0
+	6FA888B5 - A1 6CD6A96F           - mov eax,[6FA9D66C] { (0) }
+	6FA888BA - C3                    - ret 
+6F8F87E8 - 85 C0                 - test eax,eax
+6F8F87EA - 0F85 87010000         - jne 6F8F8977
+6F8F87F0 - 56                    - push esi
+6F8F87F1 - 8B 35 A014906F        - mov esi,[6F9014A0] { (09836680) }
+6F8F87F7 - 85 F6                 - test esi,esi
+6F8F87F9 - 74 17                 - je 6F8F8812
+6F8F87FB - EB 03                 - jmp 6F8F8800
+6F8F87FD - 8D 49 00              - lea ecx,[ecx+00]
+6F8F8800 - 8B 46 20              - mov eax,[esi+20]
+6F8F8803 - 85 C0                 - test eax,eax
+6F8F8805 - 74 04                 - je 6F8F880B
+6F8F8807 - 8B CE                 - mov ecx,esi
+6F8F8809 - FF D0                 - call eax
+6F8F880B - 8B 76 3C              - mov esi,[esi+3C]
+6F8F880E - 85 F6                 - test esi,esi
+6F8F8810 - 75 EE                 - jne 6F8F8800
+6F8F8812 - A1 BC14906F           - mov eax,[6F9014BC] { (0) }
+6F8F8817 - 85 C0                 - test eax,eax
+6F8F8819 - 0F85 57010000         - jne 6F8F8976
+6F8F881F - E8 4CAA70A0           - call d2hackmap1.InstallPatchAfterLoad_ASM
+6F8F8824 - 8D 4C 24 0C           - lea ecx,[esp+0C]
+6F8F8828 - 51                    - push ecx
+6F8F8829 - E8 D6EFFEFF           - call 6F8E7804 { ->->6FA87F70 D2gfx.Ordinal10080}
+6F8F882E - 6A 00                 - push 00 { 0 }
+6F8F8830 - 6A 00                 - push 00 { 0 }
+6F8F8832 - 6A 00                 - push 00 { 0 }
+6F8F8834 - 6A 00                 - push 00 { 0 }
+6F8F8836 - E8 C3EFFEFF           - call 6F8E77FE { ->->6FA8ADF0 D2gfx.Ordinal10085}
+6F8F883B - 85 C0                 - test eax,eax
+6F8F883D - 0F84 2E010000         - je 6F8F8971
+6F8F8843 - 6A 00                 - push 00 { 0 }
+6F8F8845 - E8 7EEFFEFF           - call 6F8E77C8 { ->->6FA8B9A0 D2gfx.Ordinal10021}
+6F8F884A - 8B 15 9414906F        - mov edx,[6F901494] { (0) }
+6F8F8850 - 85 D2                 - test edx,edx
+6F8F8852 - 0F84 96000000         - je 6F8F88EE
+6F8F8858 - 57                    - push edi
+6F8F8859 - 33 C0                 - xor eax,eax
+6F8F885B - B9 12000000           - mov ecx,00000012 { 18 }
+6F8F8860 - 8D 7C 24 10           - lea edi,[esp+10]
+6F8F8864 - F3 AB                 - repe stosd 
+6F8F8866 - 89 54 24 44           - mov [esp+44],edx
+6F8F886A - 89 44 24 50           - mov [esp+50],eax
+6F8F886E - 89 44 24 10           - mov [esp+10],eax
+6F8F8872 - BF 00010000           - mov edi,00000100 { 256 }
+6F8F8877 - 33 F6                 - xor esi,esi
+6F8F8879 - 8D A4 24 00000000     - lea esp,[esp+00000000]
+6F8F8880 - 6A 00                 - push 00 { 0 }
+6F8F8882 - 6A 05                 - push 05 { 5 }
+6F8F8884 - 6A FF                 - push -01 { 255 }
+6F8F8886 - 57                    - push edi
+6F8F8887 - 56                    - push esi
+6F8F8888 - 8D 54 24 24           - lea edx,[esp+24]
+6F8F888C - 52                    - push edx
+6F8F888D - E8 3CEFFEFF           - call 6F8E77CE { ->->6FA8B080 D2gfx.Ordinal10041}
+6F8F8892 - 8B 54 24 10           - mov edx,[esp+10]
+6F8F8896 - 42                    - inc edx
+6F8F8897 - 81 C6 00010000        - add esi,00000100 { 256 }
+6F8F889D - 81 FE 00040000        - cmp esi,00000400 { 1024 }
+6F8F88A3 - 89 54 24 10           - mov [esp+10],edx
+6F8F88A7 - 7C D7                 - jl 6F8F8880
+6F8F88A9 - 81 C7 00010000        - add edi,00000100 { 256 }
+6F8F88AF - 81 FF 00030000        - cmp edi,00000300 { 768 }
+6F8F88B5 - 7C C0                 - jl 6F8F8877
+6F8F88B7 - 33 F6                 - xor esi,esi
+6F8F88B9 - 5F                    - pop edi
+6F8F88BA - 8D 9B 00000000        - lea ebx,[ebx+00000000]
+6F8F88C0 - 8B 44 24 04           - mov eax,[esp+04]
+6F8F88C4 - 6A 00                 - push 00 { 0 }
+6F8F88C6 - 6A 05                 - push 05 { 5 }
+6F8F88C8 - 6A FF                 - push -01 { 255 }
+6F8F88CA - 48                    - dec eax
+6F8F88CB - 50                    - push eax
+6F8F88CC - 56                    - push esi
+6F8F88CD - 8D 4C 24 20           - lea ecx,[esp+20]
+6F8F88D1 - 51                    - push ecx
+6F8F88D2 - E8 F7EEFEFF           - call 6F8E77CE { ->->6FA8B080 D2gfx.Ordinal10041}
+6F8F88D7 - 8B 54 24 0C           - mov edx,[esp+0C]
+6F8F88DB - 42                    - inc edx
+6F8F88DC - 81 C6 00010000        - add esi,00000100 { 256 }
+6F8F88E2 - 81 FE 00040000        - cmp esi,00000400 { 1024 }
+6F8F88E8 - 89 54 24 0C           - mov [esp+0C],edx
+6F8F88EC - 7C D2                 - jl 6F8F88C0
+6F8F88EE - 8B 35 A014906F        - mov esi,[6F9014A0] { (09836680) }
+6F8F88F4 - 85 F6                 - test esi,esi
+6F8F88F6 - 74 20                 - je 6F8F8918
+6F8F88F8 - 8B 46 1C              - mov eax,[esi+1C]
+6F8F88FB - 85 C0                 - test eax,eax
+6F8F88FD - 74 12                 - je 6F8F8911
+6F8F88FF - 8B 15 7CB18F6F        - mov edx,[6F8FB17C] { (6FF76798) }
+6F8F8905 - 8B 4A 0C              - mov ecx,[edx+0C]
+6F8F8908 - 85 4E 08              - test [esi+08],ecx
+6F8F890B - 75 04                 - jne 6F8F8911
+6F8F890D - 8B CE                 - mov ecx,esi
+6F8F890F - FF D0                 - call eax
+6F8F8911 - E8 CAA672A0           - call d2hackmap1.DrawGameListPatch_ASM
+6F8F8916 - 75 E0                 - jne 6F8F88F8
+6F8F8918 - E8 33FEFFFF           - call 6F8F8750
+6F8F891D - A1 EC9C9A6F           - mov eax,[6F9A9CEC] { (0) }
+6F8F8922 - 85 C0                 - test eax,eax
+6F8F8924 - 74 17                 - je 6F8F893D
+6F8F8926 - 8B 54 24 04           - mov edx,[esp+04]
+6F8F892A - 8B 44 24 08           - mov eax,[esp+08]
+6F8F892E - 6A 7F                 - push 7F { 127 }
+6F8F8930 - 6A 00                 - push 00 { 0 }
+6F8F8932 - 52                    - push edx
+6F8F8933 - 50                    - push eax
+6F8F8934 - 6A 00                 - push 00 { 0 }
+6F8F8936 - 6A 00                 - push 00 { 0 }
+6F8F8938 - E8 D3EEFEFF           - call 6F8E7810 { ->->6FA8B9F0 D2gfx.Ordinal10045}
+6F8F893D - 8B 35 A014906F        - mov esi,[6F9014A0] { (09836680) }
+6F8F8943 - 85 F6                 - test esi,esi
+6F8F8945 - 74 20                 - je 6F8F8967
+6F8F8947 - 8B 46 1C              - mov eax,[esi+1C]
+6F8F894A - 85 C0                 - test eax,eax
+6F8F894C - 74 12                 - je 6F8F8960
+6F8F894E - 8B 0D 7CB18F6F        - mov ecx,[6F8FB17C] { (6FF76798) }
+6F8F8954 - 8B 51 0C              - mov edx,[ecx+0C]
+6F8F8957 - 85 56 08              - test [esi+08],edx
+6F8F895A - 74 04                 - je 6F8F8960
+6F8F895C - 8B CE                 - mov ecx,esi
+6F8F895E - FF D0                 - call eax
+6F8F8960 - 8B 76 3C              - mov esi,[esi+3C]
+6F8F8963 - 85 F6                 - test esi,esi
+6F8F8965 - 75 E0                 - jne 6F8F8947
+6F8F8967 - E8 D4F5FFFF           - call 6F8F7F40
+6F8F896C - E8 51EEFEFF           - call 6F8E77C2 { ->->6FA8ADD0 d2gfx_flushFramebuf} //put to screen
+6F8F8971 - E8 FAEFFFFF           - call 6F8F7970
+6F8F8976 - 5E                    - pop esi
+6F8F8977 - 83 C4 50              - add esp,50 { 80 }
+6F8F897A - C3                    - ret 
+
+D2Win.Ordinal10014 
+6F8F8980 - 83 EC 20              - sub esp,20 { 32 }
+6F8F8983 - 53                    - push ebx
+6F8F8984 - 55                    - push ebp
+6F8F8985 - 8B 2D E0B18F6F        - mov ebp,[6F8FB1E0] { (7C80932E) GetTickCount}
+6F8F898B - 57                    - push edi
+6F8F898C - C7 44 24 0C 00000000  - mov [esp+0C],00000000 { 0 }
+6F8F8994 - FF D5                 - call ebp
+6F8F8996 - 8B D8                 - mov ebx,eax
+6F8F8998 - A1 30FD8F6F           - mov eax,[6F8FFD30] { (1) }
+6F8F899D - 33 FF                 - xor edi,edi
+6F8F899F - 85 C0                 - test eax,eax
+6F8F89A1 - 0F84 D1000000         - je 6F8F8A78
+6F8F89A7 - 56                    - push esi
+loop start
+6F8F89A8 - 6A 00                 - push 00 { 0 }
+6F8F89AA - 6A 00                 - push 00 { 0 }
+6F8F89AC - 6A 00                 - push 00 { 0 }
+6F8F89AE - 6A 00                 - push 00 { 0 }
+6F8F89B0 - 8D 44 24 24           - lea eax,[esp+24]
+6F8F89B4 - 50                    - push eax
+6F8F89B5 - FF 15 68B38F6F        - call dword ptr [6F8FB368] { ->USER32.PeekMessageA }
+6F8F89BB - 85 C0                 - test eax,eax
+6F8F89BD - 74 3D                 - je 6F8F89FC
+6F8F89BF - 6A 00                 - push 00 { 0 }
+6F8F89C1 - 6A 00                 - push 00 { 0 }
+6F8F89C3 - 6A 00                 - push 00 { 0 }
+6F8F89C5 - 8D 4C 24 20           - lea ecx,[esp+20]
+6F8F89C9 - 51                    - push ecx
+6F8F89CA - FF 15 34B38F6F        - call dword ptr [6F8FB334] { ->USER32.GetMessageA }
+6F8F89D0 - 85 C0                 - test eax,eax
+6F8F89D2 - A3 30FD8F6F           - mov [6F8FFD30],eax { (1) }
+6F8F89D7 - 75 0B                 - jne 6F8F89E4
+6F8F89D9 - A1 F09C9A6F           - mov eax,[6F9A9CF0] { (6FA521A0) }
+6F8F89DE - 85 C0                 - test eax,eax
+6F8F89E0 - 74 02                 - je 6F8F89E4
+6F8F89E2 - FF D0                 - call eax
+6F8F89E4 - 8D 54 24 14           - lea edx,[esp+14]
+6F8F89E8 - 52                    - push edx
+6F8F89E9 - FF 15 4CB38F6F        - call dword ptr [6F8FB34C] { ->USER32.TranslateMessage }
+6F8F89EF - 8D 44 24 14           - lea eax,[esp+14]
+6F8F89F3 - 50                    - push eax
+6F8F89F4 - FF 15 5CB38F6F        - call dword ptr [6F8FB35C] { ->USER32.DispatchMessageA }
+6F8F89FA - EB 6E                 - jmp 6F8F8A6A
+no more message
+6F8F89FC - FF D5                 - call ebp
+6F8F89FE - 8B F0                 - mov esi,eax
+6F8F8A00 - 2B F3                 - sub esi,ebx
+6F8F8A02 - FF D5                 - call ebp
+6F8F8A04 - 81 FE E8030000        - cmp esi,000003E8 { 1000 }
+6F8F8A0A - 8B D8                 - mov ebx,eax
+6F8F8A0C - 76 05                 - jna 6F8F8A13
+6F8F8A0E - BE E8030000           - mov esi,000003E8 { 1000 }
+6F8F8A13 - 2B FE                 - sub edi,esi
+6F8F8A15 - 85 FF                 - test edi,edi
+6F8F8A17 - 7F 26                 - jg 6F8F8A3F
+6F8F8A19 - 83 C7 28              - add edi,28 { 40 }
+6F8F8A1C - 81 FF 18FCFFFF        - cmp edi,FFFFFC18 { -1000 }
+6F8F8A22 - 7D 02                 - jnl 6F8F8A26
+6F8F8A24 - 33 FF                 - xor edi,edi
+6F8F8A26 - 8B 44 24 34           - mov eax,[esp+34]
+6F8F8A2A - 85 C0                 - test eax,eax
+6F8F8A2C - 74 0C                 - je 6F8F8A3A
+6F8F8A2E - 8B 74 24 10           - mov esi,[esp+10]
+6F8F8A32 - 56                    - push esi
+6F8F8A33 - FF D0                 - call eax //6FA51FA0
+6F8F8A35 - 46                    - inc esi
+6F8F8A36 - 89 74 24 10           - mov [esp+10],esi
+6F8F8A3A - E8 A1FDFFFF           - call 6F8F87E0 D2Win.Ordinal10024<-------
+6F8F8A71 - 0F85 31FFFFFF         - jne 6F8F89A8
+loop end
+
+
+
+
+

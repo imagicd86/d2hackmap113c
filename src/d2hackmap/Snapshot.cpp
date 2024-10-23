@@ -5,6 +5,7 @@
 static int debug=0;
 struct ItemIdName {int id;const char *name;};
 #define MAX_NAMES 512
+static int hasValuableEquipment;
 int dwMercSeed=0,dwMercNameId;
 char *questNames[41];
 static char *clsNames[8]={"Ama","Sor","Nec","Pal","Bar","Dru","Asn","???"};
@@ -145,11 +146,8 @@ void LoadLogNames(FILE *logfp) {
 	}
 	itemNamesLoaded=1;
 }
-static FILE *openSnapshotFile(char *subfolder,char *ext,char *mode,char sep,char *action,int msg) {
-	char buf[1024];
-	char *realm=(*d2client_pGameInfo)->szRealmName;
-	char *account=(*d2client_pGameInfo)->szAccountName;
-	char *name=(*d2client_pGameInfo)->szCharName;
+void getSnapshotPath(char *buf,char *realm,char *account,char *name,
+	char *subfolder,char *ext,char sep) {
 	if (!szSnapshotPath[0])
 		sprintf(buf,"%ssnapshot",szPluginPath);
 	else if (szSnapshotPath[0]&&szSnapshotPath[1]==':') //absolute path
@@ -177,6 +175,13 @@ static FILE *openSnapshotFile(char *subfolder,char *ext,char *mode,char sep,char
 		int len=strlen(buf);
 		sprintf(buf+len,"\\%s.%s",name,ext);
 	}
+}
+static FILE *openSnapshotFile(char *subfolder,char *ext,char *mode,char sep,char *action,int msg) {
+	char buf[1024];
+	char *realm=(*d2client_pGameInfo)->szRealmName;
+	char *account=(*d2client_pGameInfo)->szAccountName;
+	char *name=(*d2client_pGameInfo)->szCharName;
+	getSnapshotPath(buf,realm,account,name,subfolder,ext,sep);
 	FILE *fp=fopen(buf,mode);
 	if (!msg) return fp;
 	if (!fp) {
@@ -344,6 +349,7 @@ static int dumpStats(FILE *fp,Stat *stat) {
 	}
 	return sockets;
 }
+BYTE GetItemColour(UnitAny *pItem,int isMinimap);
 static void countGemRunes(FILE *fp,UnitAny *pUnit) {
 	static char *gemClasses[5]={"CGem","FGem","NGem","FlGem","PGem"};
 	static char *gemCls[5]={"c","f","n","fl","p"};
@@ -642,6 +648,19 @@ static void dumpItems(FILE *fp,UnitAny *pUnit,int level) {
 	while (pUnit) {
 		if (pUnit->dwUnitType!=UNITNO_ITEM) goto next;
 		int index = GetItemIndex(pUnit->dwTxtFileNo)+1;//all config arrays are based 1
+		if (2103<=index&&index<=2135) { //runes
+			hasValuableEquipment++;
+		} else if (2050<=index&&index<=2079) { //gems
+			hasValuableEquipment++;
+		} else if (2090<=index&&index<=2094) { //skull
+			hasValuableEquipment++;
+		} else if (2006<=index&&index<=2012) { //potions & books
+		} else if (2017<=index&&index<=2049) { //arrows & quest
+		} else if (2080<=index&&index<=2089) { //potions
+		} else {
+			BYTE color=GetItemColour(pUnit,0);
+			if (color!=(BYTE)-2) hasValuableEquipment++;
+		}
 		ItemTxt *pItemTxt = d2common_GetItemTxt( pUnit->dwTxtFileNo );
 		int location= pUnit->pItemData->nItemLocation;
 		int sort=10,loc=10;
@@ -993,6 +1012,7 @@ static void dumpInventory() {
 		if (fp) {fwrite(ptr,84,1,fp);fclose(fp);}
 	}
 	fp=openSnapshotFile(NULL,"txt","w+",'_',"inventory",1);if (!fp) return;
+	hasValuableEquipment=0;
 	dumpUnit(fp,PLAYER);
 	UnitAny *m=NULL,*golem=NULL;
 	PetUnit *pGolem = GetPetByType(PLAYER,3);
@@ -1009,11 +1029,19 @@ static void dumpInventory() {
 	if (pMerc) {
 		m=GetUnitFromIdSafe(pMerc->dwUnitId , UNITNO_MONSTER ) ;
 		if (m) {
-			fp=openSnapshotFile(NULL,"m.txt","w+",'_',"mercenary",1);if (!fp) return;
-			lastLocation=0;
-			dumpUnit(fp,m);
-			fclose(fp);
+			fp=openSnapshotFile(NULL,"m.txt","w+",'_',"mercenary",1);
+			if (fp) {
+				lastLocation=0;
+				dumpUnit(fp,m);
+				fclose(fp);
+			}
 		}
+	}
+	fp=openSnapshotFile("dat","CanDel.txt","w+",'_',"CanDelete",1);
+	if (fp) {
+		fprintf(fp,"HasValuableEquipment:%d\n",hasValuableEquipment);
+		fprintf(fp,"MercDead:%d\n",*d2client_pMercData16!=0xFFFF?1:0);
+		fclose(fp);
 	}
 	u16 quest[3][48]={0};
 	char wp[3][24]={0};
@@ -1175,44 +1203,50 @@ void dumpMap() {
 	fprintf(fp,"player=(%d,%d) level=%d\n",px,py,pDrlgLevel->dwLevelNo);
 	AreaRectData *pData = PLAYER->pMonPath->pAreaRectData;
 	AreaRectInfo *pInfo = pData->pAreaRectInfo;
-	fprintf(fp,"CurrentRect: unit(%d,%d,%d,%d) tile(%d,%d,%d,%d)",pData->unitX,pData->unitY,pData->unitW,pData->unitH,
+	fprintf(fp,"CurrentRect: unit(%d,%d,%d,%d) tile(%d,%d,%d,%d)\n",
+		pData->unitX,pData->unitY,pData->unitW,pData->unitH,
 		pData->tileX,pData->tileY,pData->tileW,pData->tileH);
 	fprintf(fp,"present units:");
 	for (PresetUnit *pUnit=pInfo->pPresetUnits;pUnit;pUnit=pUnit->pNext) {
-		ObjectTxt *pObj = d2common_GetObjectTxt(pUnit->dwTxtFileNo);
+		int map=0;
+		if (pUnit->dwUnitType==UNITNO_OBJECT) {
+			ObjectTxt *pObj = d2common_GetObjectTxt(pUnit->dwTxtFileNo);
+			if (pObj) map=pObj->nAutoMap;
+		}
 		fprintf(fp,"\t%d:%d(%d,%d) map=%d\n",pUnit->dwUnitType,pUnit->dwTxtFileNo,
-			pUnit->unitDx,pUnit->unitDy,pObj->nAutoMap);
+			pUnit->unitDx,pUnit->unitDy,map);
 	}
-	fputc('\n',fp);
+	fputc('\n',fp);fflush(fp);
 	fprintf(fp," Info(%d,%d,%d,%d)\n",pInfo->tileX,pInfo->tileY,pInfo->tileW,pInfo->tileH);
 	AreaRectData *pAreaRectData = PLAYER->pMonPath->pAreaRectData;
 	for (int i=0;i<pAreaRectData->nearbyRectCount;i++) {
 		AreaRectData *pNData=pAreaRectData->paDataNear[i];
+		if (!pNData) continue;
 		AreaRectInfo *pNInfo = pNData->pAreaRectInfo;
 		int dstLvl=pNInfo->pDrlgLevel->dwLevelNo;
 		fprintf(fp," NearInfo(%d,%d,%d,%d) lvl=%d\n",pNData->tileX,pNData->tileY,pNData->tileW,pNData->tileH,dstLvl);
 	}
 	AreaRectBitmap *gtypes=pData->bitmap;
-	fprintf(fp," (%d,%d,%d,%d) (%d,%d,%d,%d)\n",gtypes->unitX,gtypes->unitY,gtypes->unitW,gtypes->unitH,
-		gtypes->tileX,gtypes->tileY,gtypes->tileW,gtypes->tileH);
-	for (int bitshift=0;bitshift<16;bitshift+=4) {
-		fprintf(fp,"bitmask%d-%d\n",bitshift,bitshift+3);
-		unsigned short *ptr=gtypes->bitmap;
-		for (int y=0;y<gtypes->unitH;y++) {
-			for (int x=0;x<gtypes->unitW;x++) {
-				int b=((*ptr++)>>bitshift)&0xF;
-				if (gtypes->unitX+x==px&&gtypes->unitY+y==py) fputc('#',fp);
-				if (b) fprintf(fp,"%X",b);
-				else fputc(' ',fp);
-				if ((x%5)==4) fputc('|',fp);
+	if (gtypes) {
+		fprintf(fp," (%d,%d,%d,%d) (%d,%d,%d,%d)\n",gtypes->unitX,gtypes->unitY,gtypes->unitW,gtypes->unitH,
+			gtypes->tileX,gtypes->tileY,gtypes->tileW,gtypes->tileH);
+		for (int bitshift=0;bitshift<16;bitshift+=4) {
+			fprintf(fp,"bitmask%d-%d\n",bitshift,bitshift+3);
+			unsigned short *ptr=gtypes->bitmap;
+			for (int y=0;y<gtypes->unitH;y++) {
+				for (int x=0;x<gtypes->unitW;x++) {
+					int b=((*ptr++)>>bitshift)&0xF;
+					if (gtypes->unitX+x==px&&gtypes->unitY+y==py) fputc('#',fp);
+					if (b) fprintf(fp,"%X",b);
+					else fputc(' ',fp);
+					if ((x%5)==4) fputc('|',fp);
+				}
+				fputc('\n',fp);
+				int n=gtypes->unitW*6/5;
+				if ((y%5)==4) {for (int x=0;x<n;x++) fputc('-',fp);fputc('\n',fp);}
 			}
-			fputc('\n',fp);
-			int n=gtypes->unitW*6/5;
-			if ((y%5)==4) {for (int x=0;x<n;x++) fputc('-',fp);fputc('\n',fp);}
 		}
-/*
-	value: 1:empty 7:wall 5:behind_wall
-*/
+	}
 		//bit0: path block
 		//bit1: vision block
 		//bit2: attack block
@@ -1224,7 +1258,6 @@ void dumpMap() {
 		//bit10: object
 		//bit11: door?
 		//bit12: player or monster
-	}
 	for (AreaRectInfo *pInfo=pDrlgLevel->pAreaRectInfo;pInfo;pInfo=pInfo->pNext) {
 		fprintf(fp," Info(%d,%d,%d,%d)",pInfo->tileX,pInfo->tileY,pInfo->tileW,pInfo->tileH);
 		AreaRectData *pData=pInfo->pAreaRectData;
@@ -1239,16 +1272,6 @@ void dumpMap() {
 		}
 		fputc('\n',fp);
 	}
-	/*
-	AreaRectTiles *tiles=pAreaRectData->tiles;
-	fprintf(fp,"AreaRectTiles: %X %d\n",tiles,tiles->count);
-	hex(fp,(int)tiles,tiles,0x30);
-	for (int i=0;i<tiles->count;i++) {
-		AreaRectTile *gp=&tiles->tiles[i];
-		fprintf(fp,"ground: %d (%d,%d) (%d,%d):\n",i,gp->xi,gp->yi,gp->xPixel,gp->yPixel);
-		hex(fp,(int)gp,gp,0x30);
-	}
-	*/
 	fclose(fp);
 }
 void dumpTxt() {
@@ -1326,7 +1349,7 @@ int DoSnapshot() {
 		}
 		fclose(fp);
 	}
-	dumpMinimap();
+	//dumpMinimap();
 	dumpMap();
 	dumpTxt();
 	fp=openDbgFile("_self.txt");
@@ -1483,5 +1506,30 @@ void __declspec(naked) RecvCommand_81_Patch_ASM() {
 		mov eax,[ecx+0xc]
 		mov edx,[ecx+0x10]
 		ret
+	}
+}
+static void doDeleteSnapshotFile(char *path) {
+	LOG("delete %s\n",path);
+	if (fileExist(path)) DeleteFileA(path);
+}
+void removeSnapshot(char *realm,char *account,char *charname) {
+	char buf[1024],ext[16];
+	getSnapshotPath(buf,realm,account,charname,NULL,"txt",'_');
+	doDeleteSnapshotFile(buf);
+	getSnapshotPath(buf,realm,account,charname,NULL,"m.txt",'_');
+	doDeleteSnapshotFile(buf);
+	getSnapshotPath(buf,realm,account,charname,NULL,"d2s",'\\');
+	doDeleteSnapshotFile(buf);
+	getSnapshotPath(buf,realm,account,charname,"log","log",'_');
+	doDeleteSnapshotFile(buf);
+	getSnapshotPath(buf,realm,account,charname,"dat","CanDel.txt",'_');
+	doDeleteSnapshotFile(buf);
+	for (int d=0;d<=2;d++) {
+		sprintf(ext,"quest%d.bin",d);
+		getSnapshotPath(buf,realm,account,charname,"dat",ext,'_');
+		doDeleteSnapshotFile(buf);
+		sprintf(ext,"wp%d.bin",d);
+		getSnapshotPath(buf,realm,account,charname,"dat",ext,'_');
+		doDeleteSnapshotFile(buf);
 	}
 }

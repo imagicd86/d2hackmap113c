@@ -4,7 +4,7 @@
 void usePotion(int mana);
 extern int fState100HP,fState106Mana;
 extern int dwHPotionCount,dwMPotionCount;
-extern int fBackToTown;
+extern int dwBackToTownTimeout;
 int BackToTown();
 int dwCheckMercMs;
 static int manaMs=0,healingMs=0,golemMs=0,hireMs=0;
@@ -103,16 +103,11 @@ void ProtectAction(wchar_t* wszShowMsg, int action = 1 , BYTE nCol = 8) {
 			d2client_ShowGameMessage(	wszTemp, nCol);
 			ExitGame();
 		} else if ( action == 2) {
-			if ( fBackToTown==FALSE ){
+			if (!dwBackToTownTimeout) {
 				wcscat(wszTemp	,	L"Back to town.");
 				d2client_ShowGameMessage( wszTemp, nCol );
 				BackToTown();
 			}
-		} else if ( action == 3) {
-			wcscat(wszTemp	,	L"Be careful.");
-			d2client_ShowGameMessage( wszTemp, nCol );
-		} else if ( action == 4) {
-			//todo
 		}
 	}
 }
@@ -255,7 +250,7 @@ void ChickenLifeLoop() {
 		}
 		if ( tChickenHostile.isOn ) {
 			for (RosterUnit *pUnit = PLAYERLIST; pUnit; pUnit = pUnit->pNext ) {
-				if ( TestPvpFlag(pUnit->dwUnitId , dwPlayerId) ==0 ){
+				if (testPvpFlag(pUnit->dwUnitId)==0) {
 					if ( (dwChickenHostileLife && dwPlayerHP<=dwChickenHostileLife) 
 						|| (dwChickenHostileLifePercent && dwPlayerHP*100 <= dwPlayerMaxHP*dwChickenHostileLifePercent) ){
 						ProtectAction(L"<Hackmap>: Life below chicken hostile threshold,",nChickenLifeAction);
@@ -314,7 +309,7 @@ void CheckDangerousPlayer( UnitAny  *pUnit ) {
 		return ;
 	}
 	if ( tChickenHostileNearby.isOn && pUnit->dwMode ){
-		if ( fLifeProtectOn==FALSE && TestPvpFlag(dwPlayerId , pUnit->dwUnitId) ==0){
+		if ( fLifeProtectOn==FALSE && testPvpFlag(pUnit->dwUnitId) ==0){
 			if ( (dwChickenHostileNearbyLife && dwPlayerHP<=dwChickenHostileNearbyLife) 
 				|| (dwChickenHostileNearbyLifePercent && dwPlayerHP*100 <= dwPlayerMaxHP*dwChickenHostileNearbyLifePercent) ){
 				ProtectAction(L"<Hackmap>: Life below chicken hostile nearby threshold,", nChickenLifeAction );

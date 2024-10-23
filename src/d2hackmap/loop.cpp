@@ -3,7 +3,7 @@
 #include "multi.h"
 #include "auto.h"
 
-char *szVersion="20241011";
+char *szVersion="20241022";
 static char *wszProgTitle = "<Hackmap>: Sting's Hackmap For Diablo II fixed by ding (v1.13c.1.4) (%s) https://github.com/d2hackmap113c/d2hackmap113c/";
 int fDebugMs=0;
 int dwChangeLeftSkill;
@@ -20,8 +20,10 @@ void loop_addConfigVars() {
 	for (int i=0;i<_ARRAYSIZE(aConfigVars);i++) addConfigVar(&aConfigVars[i]);
 }
 
-extern int dwDrawCount,fBackToTown,dwPartyResponseMs,dwOrgMode,dwNpcTradeCheckMs,dwQuestAlertMs;
+extern int dwDrawCount,dwBackToTownTimeout,dwPartyResponseMs,dwOrgMode,dwNpcTradeCheckMs,dwQuestAlertMs;
 extern ToggleVar tBugAllHellAlert,tAutoMap;
+extern int dwUpdateQuestMs;
+extern int dwSendPacketCount;
 
 void ResponseInvite();
 void CheckD2WinEditBox();
@@ -37,6 +39,7 @@ void QuestNewGame();void QuestRunLoop();void QuestNewLevel();void QuestNewAct();
 void SnapshotNewGame();void SnapshotEndGame();void SnapshotRunLoop();
 void NpcTradeNewGame();void NpcTradeLoop();
 void ChickenLifeNewGame();void ChickenLifeLoop();
+void quickLoop();
 void PacketNewGame();
 void item_NewGame();
 void quick_NewGame();void quick_EndGame();
@@ -94,6 +97,7 @@ static void gameStart() {
 		}
 	}
 	if (tPacketHandler.isOn) SetBottomAlertMsg3(L"Warning: Network Packet Patch Installed",6000,1,1);
+	dwSendPacketCount=0;
 }
 
 void GameLoopPatch() {
@@ -177,14 +181,16 @@ void GameLoopPatch() {
 		lastLevel=dwCurrentLevel;
 		dwLevelChangeMs=dwCurMs;
 		dwAutoSummonStartMs=dwCurMs;
-		if (tBugAllHellAlert.isOn&&DIFFICULTY==2) QuestNewLevel();
+		if (tBugAllHellAlert.isOn&&DIFFICULTY==2
+			||dwCurrentLevel==46||66<=dwCurrentLevel&&dwCurrentLevel<=72) QuestNewLevel();
 		AutoMapNewLevel();
 	}
 	if (dwChangeLeftSkill!=-1) {selectSkill(0,dwChangeLeftSkill);dwChangeLeftSkill=-1;}
-	if(fPlayerInTown) fBackToTown=0;
+	if (dwBackToTownTimeout) quickLoop();
 	if (dwPartyResponseMs&&dwCurMs>dwPartyResponseMs) ResponseInvite();
 	if (fViewingTargetUnit) SetViewUnit();
-	if (dwQuestAlertMs&&dwCurMs>=dwQuestAlertMs) QuestRunLoop();
+	if (dwQuestAlertMs&&dwCurMs>=dwQuestAlertMs
+		||dwUpdateQuestMs&&dwCurMs>=dwUpdateQuestMs) QuestRunLoop();
 	dwOrgMode = 0;
 	ChickenLifeLoop();
 	int fChatInput=*d2client_pUiChatOn;//d2client_CheckUiStatus(UIVAR_CHATINPUT);
@@ -222,6 +228,7 @@ void GameEndPatch() {
 	QueryPerformanceCounter(&perfEnd);
 	double timeMs=(perfEnd.QuadPart-perfStart.QuadPart)*1000.0/perfFreq.QuadPart;
 	LOG("Exit game time %.3lf ms\n",timeMs);
+	LOG("Send %d packet\n",dwSendPacketCount);
 }
 void __declspec(naked) GameLoopPatch_ASM() {
 	__asm {

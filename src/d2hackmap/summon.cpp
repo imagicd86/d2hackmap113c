@@ -274,12 +274,14 @@ original:
 6FB5C723 - 84 C0                 - test al,al
 6FB5C725 - 8B 51 09              - mov edx,[ecx+09]
 */
+extern int fPetListValid;
 void __declspec(naked) RecvCommand_7A_Patch_ASM() {
 	__asm {
 		mov edx,dwCurMs;
 		add edx, 100
 		mov dwCheckSkeletonCountMs,edx
 		mov dwAutoSummonCheckEnchantMs,1
+		mov fPetListValid,0
 //original
 		mov al, byte ptr [ecx+1]
 		test al,al

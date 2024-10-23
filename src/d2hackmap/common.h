@@ -77,10 +77,11 @@ int drawBgText(wchar_t *wStr,int x,int y,int color,int bgColor);
 int drawBgTextLeft(wchar_t *s,int x,int y,int color,int bgColor);
 int drawBgTextMiddle(wchar_t *s,int x,int y,int color,int bgColor);
 
-WORD GetAreaLevel();
-int getPlayerClass(DWORD id);
-int sameParty(DWORD dwUnitId , DWORD dwTargetUnitId);
-BYTE TestPvpFlag(DWORD dwUnitId , DWORD dwTargetUnitId);
+int GetAreaLevel();
+int getPlayerClass(int id);
+int sameParty(int dwUnitId);
+int testPvpFlag(int dwUnitId);
+int getMonsterOwnerId(int id);
 int GetUnitResist(UnitAny *pUnit,DWORD dwStatNo);
 BOOL CheckUnitSelect( UnitAny *pUnit );
 int GetItemAlvl(int Ilvl,int Qlvl,int magic_lvl);

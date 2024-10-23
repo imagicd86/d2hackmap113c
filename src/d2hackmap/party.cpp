@@ -54,7 +54,9 @@ int CheckInvite() {
 	}
 	return 1;
 }
+extern int fPartyListValid;
 void __stdcall AutoParty(BYTE *aPacket) {
+	fPartyListValid=0;
 	if ( tAutoParty.isOn && aPacket[1] == 0x07 && aPacket[2] == 0x02 && aPacket[7] == 0x05 ) {
 		// Player Is Asking To Party With You
 		// Player ID = aPacket[3~6]

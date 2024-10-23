@@ -75,6 +75,7 @@ void quick_addConfigVars();void quickswap_addConfigVars();void PartyHelp_addConf
 void GameChat_addConfigVars();void misc_addConfigVars();void loop_addConfigVars();
 void autoteleport_addConfigVars();void autoroute_addConfigVars();
 
+void login_initConfigVars();
 void automap_initConfigVars();void lifebar_initConfigVars();void env_initConfigVars();
 void autoskill_initConfigVars();void waypoint_initConfigVars();void winmsg_initConfigVars();
 void item_initConfigVars();void dangerous_initConfigVars();void DropProtection_initConfigVars();
@@ -114,7 +115,7 @@ static void InitValues(){
 	nSymbols=0;warningMsgCount=0;
 	memset(tKeyEventMap,0,sizeof(tKeyEventMap) );
 	warningMsgs=NULL;
-	winmsg_initConfigVars();automap_initConfigVars();env_initConfigVars();
+	login_initConfigVars();winmsg_initConfigVars();automap_initConfigVars();env_initConfigVars();
 	lifebar_initConfigVars();item_initConfigVars();dangerous_initConfigVars();
 	DropProtection_initConfigVars();packet_initConfigVars();gamemonitor_initConfigVars();
 	autoteleport_initConfigVars();multiclient_initConfigVars();autoskill_initConfigVars();
@@ -899,10 +900,8 @@ BOOL LoadConfig() {
 			}
 		}
 	}
-	LOG("tKeyEventMap: %x\n", tKeyEventMap);
-	LOG("DoTest function: %x\n", &DoTest);
-	LOG("Packet debug function: %x\n", &packetDebug);
-	LOG("Weapons=%d Armors=%d\n",*d2common_pWeaponsTxts,*d2common_pArmorTxts);//Weapons=306 Armors=202
-	//LOG("DoTest=0x%x\n",(int)DoTest);
+	//LOG("DoTest function: %x\n", &DoTest);
+	//LOG("Packet debug function: %x\n", &packetDebug);
+	//LOG("Weapons=%d Armors=%d\n",*d2common_pWeaponsTxts,*d2common_pArmorTxts);//Weapons=306 Armors=202
 	return TRUE;
 }

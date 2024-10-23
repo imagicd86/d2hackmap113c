@@ -205,7 +205,7 @@ int AutoTeleportGetTarget(POINT *dst,int *unitType,int *unitTxt,int *pdis) {
 	if (path->pathNext) path=path->pathNext;
 	if (path->pathNext) path=path->pathNext;
 	dst->x=path->unitX;dst->y=path->unitY;
-	if (pdis) *pdis=((path->dis>>16)-1)*path->tileW*5;
+	if (pdis) *pdis=(path->dis>>16)-1;
 	if (path->pathNext) return 1;
 	if (path->pTarget->type==1) return 3;
 	if (path->pTarget->type==2) return 4;

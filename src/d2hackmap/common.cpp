@@ -98,6 +98,26 @@ char *loadFile(HANDLE heap,FILE *fp,int *psize) {
 	} 
 	return p;
 }
+static wchar_t lastMsg[256];
+static int lastMsgColor=0,lastMsgTimeoutMs=0;
+void drawMainMenuMessages() {
+	if (lastMsgTimeoutMs) {
+		DWORD dwOldFone = d2win_SetTextFont(1);
+		d2win_DrawText(lastMsg,10,30,lastMsgColor,-1);
+		d2win_SetTextFont(dwOldFone);
+		if (dwCurMs>lastMsgTimeoutMs) lastMsgTimeoutMs=0;
+	}
+}
+static void d2msg(int party,wchar_t *s,int color) {
+	if (fInGame) {
+		if (!party) d2client_ShowGameMessage(s, color);
+		else d2client_ShowPartyMessage(s, color);
+	} else {
+		lastMsgColor=color;
+		lastMsgTimeoutMs=dwCurMs+10000;
+		wcscpy(lastMsg,s);
+	}
+}
 void __cdecl gameMessage(char *fmt, ...) {
 	va_list va;
 	wchar_t wszbuf[256];
@@ -107,7 +127,7 @@ void __cdecl gameMessage(char *fmt, ...) {
 	if (len>255) buf[255]=0;
 	wsprintfW(wszbuf, L"%hs",buf);
 	LOG("%s\n",buf);
-	d2client_ShowGameMessage(wszbuf, 0);
+	d2msg(0,wszbuf,0);
 }
 void __cdecl partyMessage(char *fmt, ...) {
 	va_list va;
@@ -118,21 +138,21 @@ void __cdecl partyMessage(char *fmt, ...) {
 	if (len>255) buf[255]=0;
 	wsprintfW(wszbuf, L"%hs",buf);
 	LOG("%s\n",buf);
-	d2client_ShowPartyMessage(wszbuf, 0);
+	d2msg(1,wszbuf,0);
 }
 void __cdecl gameMessageW(wchar_t *fmt, ...) {
 	va_list va;
 	wchar_t wszbuf[256];
 	va_start(va, fmt);
 	wvsprintfW(wszbuf, fmt,va);
-	d2client_ShowGameMessage(wszbuf, 0);
+	d2msg(0,wszbuf,0);
 }
 void __cdecl partyMessageW(wchar_t *fmt, ...) {
 	va_list va;
 	wchar_t wszbuf[256];
 	va_start(va, fmt);
 	wvsprintfW(wszbuf, fmt,va);
-	d2client_ShowPartyMessage(wszbuf, 0);
+	d2msg(1,wszbuf,0);
 }
 
 //static int get_processor_number() {SYSTEM_INFO info;GetSystemInfo(&info);return (int)info.dwNumberOfProcessors;}
@@ -665,10 +685,10 @@ void DrawCenterAlertMsg(){
 	}
 }
 
-WORD GetAreaLevel() {	
-	static DWORD dwLastLevelNo = 0 ;
-	static WORD  wAreaLevel = 0 ;
-	if( dwLastLevelNo != LEVELNO){
+int GetAreaLevel() {	
+	static int dwLastLevelNo = 0 ;
+	static int  wAreaLevel = 0 ;
+	if (dwLastLevelNo!=LEVELNO) {
 		dwLastLevelNo = LEVELNO;
 		LevelTxt *pLvlTxt=d2common_GetLevelTxt(LEVELNO);
 		wAreaLevel = pLvlTxt->nMonLv[EXPANSION][DIFFICULTY];	
@@ -698,53 +718,11 @@ UnitAny * GetUnitPet(UnitAny *pUnit) {
 	return NULL;
 }
 
-int getPlayerClass(DWORD id) {
+int getPlayerClass(int id) {
 	for (RosterUnit *pUnit = PLAYERLIST ; pUnit; pUnit=pUnit->pNext){
 		if (pUnit->dwUnitId== id) return pUnit->dwClassId;
 	}
 	return -1;
-}
-int sameParty(DWORD dwUnitId , DWORD dwTargetUnitId){
-	if (dwUnitId==dwTargetUnitId) return 1;
-	WORD wPartyId = (WORD)-1 , wPartyIdTarget = (WORD)-1 ;
-	for (RosterUnit *pUnit = PLAYERLIST ; pUnit; pUnit=pUnit->pNext){
-		if ( pUnit->dwUnitId== dwUnitId){
-			wPartyId=pUnit->wPartyId;
-		}else if ( pUnit->dwUnitId==dwTargetUnitId){
-			wPartyIdTarget=pUnit->wPartyId;
-			if( wPartyId!=(WORD)-1 )break;
-		}
-	}
-	if( wPartyId!=(WORD)-1 && wPartyId==wPartyIdTarget)return 1;
-	return 0 ;
-}
-BYTE TestPvpFlag(DWORD dwUnitId , DWORD dwTargetUnitId){
-	// 0 敌对  1 中立 2 队友 3 自身
-	if (dwUnitId==dwTargetUnitId) return 3;
-	WORD wPartyId = (WORD)-1 , wPartyIdTarget = (WORD)-1 ;
-	for (RosterUnit *pUnit = PLAYERLIST ; pUnit; pUnit=pUnit->pNext){
-		if ( pUnit->dwUnitId== dwUnitId){
-			wPartyId=pUnit->wPartyId;
-			if ( pUnit->pPvPInfo ){
-				PvPInfo *pPvPInfo =  *(pUnit->pPvPInfo);
-				while( pPvPInfo ){
-					if (pPvPInfo->dwUnitId==dwTargetUnitId){
-						if (pPvPInfo->dwFlag & 8){
-							return 0 ;
-						}else{
-							break;	
-						}
-					}
-					pPvPInfo = pPvPInfo->pNext;
-				}
-			}
-		}else if ( pUnit->dwUnitId==dwTargetUnitId){
-			wPartyIdTarget=pUnit->wPartyId;
-			if( wPartyId!=(WORD)-1 )break;
-		}
-	}
-	if( wPartyId!=(WORD)-1 && wPartyId==wPartyIdTarget)return 2;
-	return 1 ;
 }
 
 //获得魔法属性,只查询第一层
@@ -997,3 +975,61 @@ BOOL IsFullWindow() {
   return TRUE;
 }
 
+struct Pet {int id,owner;};
+static Pet *pets=NULL;
+int nPet=0,petCap=0;
+int fPetListValid=0;
+static int comparePet(const void *a,const void *b) {return ((Pet *)a)->id-((Pet *)b)->id;}
+int getMonsterOwnerId(int id) {
+	if (!fPetListValid) {
+		if (!pets) {petCap=64;pets=(Pet *)HeapAlloc(dllHeap,0,petCap*sizeof(Pet));}
+		nPet=0;
+		for (PetUnit *pPetUnit=*d2client_pPetUnitList;pPetUnit;pPetUnit=pPetUnit->pNext) {
+			if (nPet>=petCap) {petCap*=2;pets=(Pet *)HeapReAlloc(dllHeap,0,pets,petCap*sizeof(Pet));}
+			Pet *p=&pets[nPet++];
+			p->id=pPetUnit->dwUnitId;
+			p->owner=pPetUnit->dwOwnerId;
+		}
+		qsort(pets,nPet,sizeof(Pet),comparePet);
+		fPetListValid=1;
+	}
+	Pet pet;pet.id=id;
+	Pet *p=(Pet *)bsearch(&pet,pets,nPet,sizeof(Pet),comparePet);
+	if (!p) return -1;
+	return p->owner;
+}
+struct Pvp {int id,pvp;};
+static Pvp pvps[16];
+static int nPvp=0;
+int fPartyListValid=0;
+static int comparePvp(const void *a,const void *b) {return ((Pvp *)a)->id-((Pvp *)b)->id;}
+// 0 敌对  1 中立 2 队友 3 自身
+int testPvpFlag(int dwUnitId) {
+	if (dwUnitId==dwPlayerId) return 3;
+	if (!fPartyListValid) {
+		nPvp=0;
+		for (RosterUnit *pUnit=PLAYERLIST;pUnit;pUnit=pUnit->pNext) {
+			if (pUnit->dwUnitId==dwPlayerId) continue;
+			Pvp *p=&pvps[nPvp++];
+			p->id=pUnit->dwUnitId;
+			p->pvp=1;
+			if (pUnit->wPartyId!=(WORD)-1&&pUnit->wPartyId==dwPlayerPartyId) p->pvp=2;
+			if (pUnit->pPvPInfo) {
+				for (PvPInfo *pPvPInfo=*(pUnit->pPvPInfo);pPvPInfo;pPvPInfo=pPvPInfo->pNext) {
+					if (pPvPInfo->dwUnitId==dwPlayerId) {
+						if (pPvPInfo->dwFlag&8) p->pvp=0;
+						break;	
+					}
+				}
+			}
+			if (nPvp>=16) break;
+		}
+		qsort(pvps,nPvp,sizeof(Pvp),comparePvp);
+		fPartyListValid=1;
+	}
+	Pvp pvp;pvp.id=dwUnitId;
+	Pvp *p=(Pvp *)bsearch(&pvp,pvps,nPvp,sizeof(Pvp),comparePvp);
+	if (!p) return 1;
+	return p->pvp;
+}
+int sameParty(int dwUnitId) {return testPvpFlag(dwUnitId)>=2;}

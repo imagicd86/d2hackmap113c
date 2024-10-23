@@ -372,6 +372,10 @@
 						>
 					</File>
 					<File
+						RelativePath=".\login.cpp"
+						>
+					</File>
+					<File
 						RelativePath=".\misc.cpp"
 						>
 					</File>

@@ -1,7 +1,8 @@
 #include "stdafx.h"
 #include "d2ptrs.h"
+#include "d2ptrs2.h"
 
-ToggleVar 	tDropProtectionToggle={				TOGGLEVAR_ONOFF,	0,	-1,	1,  "Drop Protection" };
+ToggleVar tDropProtectionToggle={TOGGLEVAR_ONOFF,0,-1,1,"Drop Protection",NULL,NULL,0,2};
 ToggleVar 	tResetProtectionToggle={				TOGGLEVAR_ONOFF,	0,	-1,	1,  "Reset Protection" };
 char 			aDropProtectRune[34]	={0};
 char 			aDropProtectRuneword[256]	={0};
@@ -220,3 +221,98 @@ protect:
 	}
 }
 */
+static void unicode2win(char *dst,wchar_t *src,int size) {
+	char *end=dst+size;dst[size-1]=0;while (dst<end) {char c=(char)(*src++);*dst++=c;if (!c) break;}
+}
+void removeSnapshot(char *realm,char *account,char *charname);
+static void __fastcall deleteCharacterCallback(char *charname, char *realm) {
+	char *account=d2mcpclient_pAccountInfo->accountName;
+	LOG("Do delete character realm=%s account=%s name=%s\n",realm,account,charname);
+	removeSnapshot(realm,account,charname);
+}
+void getSnapshotPath(char *buf,char *realm,char *account,char *name,
+	char *subfolder,char *ext,char sep);
+static int __fastcall canDeleteCharacter(D2Character *pchar) {
+	char path[512],realm[256];
+	wchar_t wbuf[512];
+	unicode2win(realm,pchar->realm,255);
+	char *account=d2mcpclient_pAccountInfo->accountName;
+	LOG("Deleting character realm=%s account=%s name=%s\n",realm,account,pchar->name);
+	if (!tDropProtectionToggle.isOn) return 1;
+	char keyname[64];formatKey(keyname,tDropProtectionToggle.key);
+	getSnapshotPath(path,realm,account,pchar->name,"dat","CanDel.txt",'_');
+	if (!fileExist(path)) {
+		int pos=wsprintfW(wbuf,dwGameLng?L"hackmap装备保护":L"hackmap Drop Protection");
+		pos+=wsprintfW(wbuf+pos,dwGameLng?L"未知人物状态,按%hs关闭保护"
+			:L"Unknown character status, press %hs to disable protection",keyname);
+		gameMessageW(wbuf);
+		return 0;
+	}
+	FILE *fp=fopen(path,"r");
+	if (!fp) {
+		int pos=wsprintfW(wbuf,dwGameLng?L"hackmap装备保护":L"hackmap Drop Protection");
+		pos+=wsprintfW(wbuf+pos,dwGameLng?L"无法打开%hs,按%hs关闭保护"
+			:L"can't open %hs, press %hs to disable protection",path,keyname);
+		gameMessageW(wbuf);
+		return 0;
+	}
+	int hasEq=1,mercDead=1;
+	while (1) {
+		char buf[512];
+		char *line=fgets(buf,512,fp);if (!line) break;
+		char *value=strchr(line,':');if (!value) continue;
+		char *key=line;*value=0;value++;
+		if (strcmp(key,"HasValuableEquipment")==0) hasEq=strtol(value,0,0);
+		else if (strcmp(key,"MercDead")==0) mercDead=strtol(value,0,0);
+	}
+	if (hasEq||mercDead) {
+		int pos=wsprintfW(wbuf,dwGameLng?L"hackmap装备保护":L"hackmap Drop Protection");
+		if (hasEq) pos+=wsprintfW(wbuf+pos,dwGameLng?L"人物有%d装备":L"Character has %d equipment",hasEq);
+		if (mercDead) pos+=wsprintfW(wbuf+pos,dwGameLng?L"雇佣兵死亡装备未知":L"Merc dead");
+		pos+=wsprintfW(wbuf+pos,dwGameLng?L"按%hs关闭保护":L"press %hs to disable protection",keyname);
+		gameMessageW(wbuf);
+		return 0;
+	}
+	return 1;
+}
+//6FA4F3A8 - 8B F9                 - mov edi,ecx //char name
+//6FA4F3AA - 8B F0                 - mov esi,eax //realm name
+//...
+//6FA4F3D0 - BA 04010000           - mov edx,00000104 { 260 }
+void __declspec(naked) DeleteCharacter_Patch_ASM() {
+	__asm {
+		pushad
+		mov ecx,edi
+		mov edx,esi
+		call deleteCharacterCallback
+		popad
+		mov edx,0x104
+		ret
+	}
+}
+/*
+6FA4DB8F - 33 C0                 - xor eax,eax
+6FA4DB91 - 5E                    - pop esi
+6FA4DB92 - 81 C4 00010000        - add esp,00000100 { 256 }
+6FA4DB98 - C2 0400               - ret 0004 { 4 }
+6FA4DB9B - 85 F6                 - test esi,esi
+6FA4DB9D - 74 F0                 - je 6FA4DB8F //return 0
+6FA4DB9F - 8D 96 00010000        - lea edx,[esi+00000100] <--- install here
+6FA4DBA5 - 85 D2                 - test edx,edx
+*/
+void __declspec(naked) DeleteSelectedCharacter_Patch_ASM() {
+	__asm {
+		pushad
+		mov ecx,esi
+		call canDeleteCharacter
+		cmp eax,0
+		popad
+		je skip
+		lea edx,[esi+0x100]
+		ret
+skip:
+		pop eax
+		sub eax,0x15
+		jmp eax
+	}
+}

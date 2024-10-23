@@ -26,11 +26,16 @@ void PatchVALUE(DWORD addr, DWORD param, int len);
 static int ReloadDll();
 static int ReloadConfig();
 static int installPatchToggle();
+static void InstallPatchAfterLoad();
 void resolution_init();
 void resolution_uninit();
 static int patchCount=0;
 int load_dll_error=0;
 
+HMODULE addr_storm=NULL,addr_d2client=NULL,addr_d2common=NULL,addr_d2gfx=NULL,addr_d2win=NULL,addr_d2lang=NULL;
+HMODULE addr_d2cmp=NULL,addr_bnclient=NULL,addr_d2net=NULL,addr_fog=NULL,addr_d2game=NULL,addr_d2launch=NULL;
+HMODULE addr_d2gdi=NULL,addr_d2sound=NULL;
+HMODULE addr_d2multi=NULL,addr_d2mcpclient=NULL;
 int fGameFilter=0;
 int	fFixSocketError=1;
 ToggleVar tReloadDll={TOGGLEVAR_DOWN,0,-1,1,"ReloadDll",&ReloadDll};
@@ -147,17 +152,12 @@ static int removePatches(InstalledPatch **phead) {
 #define d2mcpclient_ADDR 0x6FA20000
 static int installNetworkRecvPatch() {
 	pPatchList=&networkPatch;
-  HMODULE addr_d2client=get_dll_addr("D2CLIENT.DLL"); 
 	if (load_dll_error) return 0;
 	installPatch(PatchCALL,DLL_ADDR(d2client,0x6FAF39A8),(DWORD)GamePacketReceivedInterceptPatch_ASM,5);
 	return 1;
 }
 int installResolutionPatches() {
 	pPatchList=&resolutionPatches;
-  HMODULE addr_d2client=get_dll_addr("D2CLIENT.DLL"); 
-  HMODULE addr_d2common=get_dll_addr("D2COMMON.DLL");
-  HMODULE addr_d2gfx=get_dll_addr("D2GFX.DLL"); 
-  HMODULE addr_d2gdi=get_dll_addr("D2GDI.DLL"); 
 	if (load_dll_error) return 0;
 installPatch(PatchCALL,DLL_ADDR(d2gdi,0x6F876D42),(DWORD)SetBitBlockWidthAndHeightPatch_ASM,5);
 installPatch(PatchCALL,DLL_ADDR(d2gdi,0x6F877051),(DWORD)SetCelDisplayLeftAndRightPatch_ASM,10);
@@ -193,20 +193,6 @@ installPatch(PatchCALL,DLL_ADDR(d2common,0x6FD632EC),(DWORD)GetGlobalBeltRecordP
   return 1;
 }
 static int installD2Patches() {
-  HMODULE addr_storm=get_dll_addr("STORM.DLL");if (!addr_storm) return 0;
-  HMODULE addr_d2client=get_dll_addr("D2CLIENT.DLL"); if (!addr_d2client) return 0;
-  HMODULE addr_d2common=get_dll_addr("D2COMMON.DLL");if (!addr_d2common) return 0;
-  HMODULE addr_d2gfx=get_dll_addr("D2GFX.DLL"); if (!addr_d2gfx) return 0;
-  HMODULE addr_d2win=get_dll_addr("D2WIN.DLL");if (!addr_d2win) return 0;
-  HMODULE addr_d2lang=get_dll_addr("D2LANG.DLL"); if (!addr_d2lang) return 0;
-  HMODULE addr_d2cmp=get_dll_addr("D2CMP.DLL"); if (!addr_d2cmp) return 0;
-  HMODULE addr_bnclient=get_dll_addr("BNCLIENT.DLL"); if (!addr_bnclient) return 0;
-  HMODULE addr_d2net=get_dll_addr("D2NET.DLL"); if (!addr_d2net) return 0;
-  HMODULE addr_fog=get_dll_addr("FOG.DLL"); if (!addr_fog) return 0;
-  HMODULE addr_d2game=get_dll_addr("D2GAME.DLL"); if (!addr_d2game) return 0;
-  HMODULE addr_d2launch=get_dll_addr("D2LAUNCH.DLL");if (!addr_d2launch) return 0;
-  HMODULE addr_d2gdi=get_dll_addr("D2GDI.DLL"); if (!addr_d2gdi) return 0;
-  HMODULE addr_d2sound=get_dll_addr("D2SOUND.DLL");if (!addr_d2sound) return 0;
 	if (load_dll_error) return 0;
 	if (!keyPatches) {
 		pPatchList=&keyPatches;
@@ -218,9 +204,18 @@ static int installD2Patches() {
 	}
 	if (installedPatches) return 1;
 	pPatchList=&installedPatches;
-if (dwDumpMpqPath)
-	installPatch(PatchCALL,DLL_ADDR(storm,0x6FC18964),(DWORD)storm268_patch_ASM,6);
-//--- m_WinMessage.h ---
+if (dwDumpMpqPath) installPatch(PatchCALL,DLL_ADDR(storm,0x6FC18964),(DWORD)storm268_patch_ASM,6);
+//--- m_pub.h ---
+installPatch(PatchCALL,DLL_ADDR(d2client,0x6FAF4230),(DWORD)GameLoopPatch_ASM,7);
+installPatch(PatchCALL,DLL_ADDR(d2client,0x6FAF5153),(DWORD)GameEndPatch_ASM,5);
+installPatch(PatchVALUE,DLL_ADDR(d2client,0x6FACAB88),0xEB,1);//取消进出传送门时间限制
+	if (addr_d2multi&&addr_d2mcpclient) InstallPatchAfterLoad();
+	else installPatch(PatchCALL,DLL_ADDR(d2win,0x6F8F881F),(DWORD)InstallPatchAfterLoad_ASM,5);
+//--- login ---
+installPatch(PatchCALL,DLL_ADDR(d2launch,0x6FA59539),(DWORD)LastBNet_Patch,5);
+//installPatch(PatchCALL,DLL_ADDR(d2launch,0x6FA4D19B),(DWORD)InitSelectCharPatch_ASM,6);
+installPatch(PatchCALL,DLL_ADDR(d2launch,0x6FA4E1B1),(DWORD)SelectCharPatch_ASM,5);
+//--- winmsg.h ---
 installPatch(PatchCALL,DLL_ADDR(d2launch,0x6FA5805B),(DWORD)ShowVersion_Patch_ASM,5);
 installPatch(PatchCALL,DLL_ADDR(d2client,0x6FAF33D1),(DWORD)StandStillPatch_ASM,10);
 installPatch(PatchCALL,DLL_ADDR(d2client,0x6FB5BF86),(DWORD)ReceiveSwapWeapon_ASM,6);
@@ -229,16 +224,14 @@ installPatch(PatchCALL,DLL_ADDR(d2client,0x6FAD71C0),(DWORD)DrawLeftBackImagePat
 installPatch(PatchCALL,DLL_ADDR(d2client,0x6FAD70D6),(DWORD)DrawRightBackImagePatch_ASM,5);
 installPatch(PatchCALL,DLL_ADDR(d2client,0x6FAF436F),(DWORD)DrawGroundAndUnitPatch_ASM,5);
 installPatch(PatchCALL,DLL_ADDR(d2client,0x6FAF437B),(DWORD)DrawControlsPatch_ASM,5);
+installPatch(PatchCALL,DLL_ADDR(d2win,0x6F8F896C),(DWORD)MainMenuFlushFramebufPatch_ASM,5);
 //--- m_PacketHandler.h ---
 installPatch(PatchCALL,DLL_ADDR(d2net,0x6FBF7650),(DWORD)GamePacketSendInterceptPatch_ASM,5);
 installPatch(PatchCALL,DLL_ADDR(d2client,0x6FAFA2A1),(DWORD)ResetSkillPatch_ASM,5);
 //--- m_DropProtection.h ---
 installPatch(PatchCALL,DLL_ADDR(d2client,0x6FAF9440),(DWORD)ClickHireMercMenuItemPatch_ASM,6);
-//--- m_pub.h ---
-installPatch(PatchCALL,DLL_ADDR(d2client,0x6FAF4230),(DWORD)GameLoopPatch_ASM,7);
-installPatch(PatchCALL,DLL_ADDR(d2client,0x6FAF5153),(DWORD)GameEndPatch_ASM,5);
-installPatch(PatchVALUE,DLL_ADDR(d2client,0x6FACAB88),0xEB,1);//取消进出传送门时间限制
-installPatch(PatchCALL,DLL_ADDR(d2win,0x6F8F881F),(DWORD)InstallPatchAfterLoad_ASM,5);
+installPatch(PatchCALL,DLL_ADDR(d2launch,0x6FA4F3D0),(DWORD)DeleteCharacter_Patch_ASM,5);
+installPatch(PatchCALL,DLL_ADDR(d2launch,0x6FA4DB9F),(DWORD)DeleteSelectedCharacter_Patch_ASM,6);
 //--- m_AutoMapCell.h ---
 installPatch(PatchCALL,DLL_ADDR(d2client,0x6FB11354),(DWORD)OverrideShrinePatch_ASM,7);
 installPatch(PatchCALL,DLL_ADDR(d2client,0x6FB11D83),(DWORD)AddShrinePatch_ASM,6);
@@ -438,9 +431,6 @@ return 1;
 }
 
 static int installD2PatchesAfterLoad() {
-  HMODULE addr_d2client=get_dll_addr("D2CLIENT.DLL"); 
-  HMODULE addr_d2multi=get_dll_addr("D2MULTI.DLL");
-  HMODULE addr_d2mcpclient=get_dll_addr("D2MCPCLIENT.DLL");
 	if (load_dll_error) return 0;
 	pPatchList=&installedPatches;
 //--- m_pub.h ---
@@ -479,43 +469,31 @@ installPatch(PatchCALL,DLL_ADDR(d2multi,0x6F9DDF4E),(DWORD)GameListRefreshTimePa
 #undef d2sound_ADDR
 #undef d2mcpclient_ADDR
 int init_d2_ptrs() {
-  HMODULE addr_storm=get_dll_addr("STORM.DLL");if (!addr_storm) return 0;
-  HMODULE addr_d2client=get_dll_addr("D2CLIENT.DLL"); if (!addr_d2client) return 0;
-  HMODULE addr_d2common=get_dll_addr("D2COMMON.DLL");if (!addr_d2common) return 0;
-  HMODULE addr_d2gfx=get_dll_addr("D2GFX.DLL"); if (!addr_d2gfx) return 0;
-  HMODULE addr_d2win=get_dll_addr("D2WIN.DLL");if (!addr_d2win) return 0;
-  HMODULE addr_d2lang=get_dll_addr("D2LANG.DLL"); if (!addr_d2lang) return 0;
-  HMODULE addr_d2cmp=get_dll_addr("D2CMP.DLL"); if (!addr_d2cmp) return 0;
-  HMODULE addr_bnclient=get_dll_addr("BNCLIENT.DLL"); if (!addr_bnclient) return 0;
-  HMODULE addr_d2net=get_dll_addr("D2NET.DLL"); if (!addr_d2net) return 0;
-  HMODULE addr_fog=get_dll_addr("FOG.DLL"); if (!addr_fog) return 0;
-  HMODULE addr_d2game=get_dll_addr("D2GAME.DLL"); if (!addr_d2game) return 0;
-  HMODULE addr_d2launch=get_dll_addr("D2LAUNCH.DLL");if (!addr_d2launch) return 0;
-  HMODULE addr_d2gdi=get_dll_addr("D2GDI.DLL"); if (!addr_d2gdi) return 0;
-  HMODULE addr_d2sound=get_dll_addr("D2SOUND.DLL");if (!addr_d2sound) return 0;
+  addr_storm=get_dll_addr("STORM.DLL");if (!addr_storm) return 0;
+  addr_d2client=get_dll_addr("D2CLIENT.DLL"); if (!addr_d2client) return 0;
+  addr_d2common=get_dll_addr("D2COMMON.DLL");if (!addr_d2common) return 0;
+  addr_d2gfx=get_dll_addr("D2GFX.DLL"); if (!addr_d2gfx) return 0;
+  addr_d2win=get_dll_addr("D2WIN.DLL");if (!addr_d2win) return 0;
+  addr_d2lang=get_dll_addr("D2LANG.DLL"); if (!addr_d2lang) return 0;
+  addr_d2cmp=get_dll_addr("D2CMP.DLL"); if (!addr_d2cmp) return 0;
+  addr_bnclient=get_dll_addr("BNCLIENT.DLL"); if (!addr_bnclient) return 0;
+  addr_d2net=get_dll_addr("D2NET.DLL"); if (!addr_d2net) return 0;
+  addr_fog=get_dll_addr("FOG.DLL"); if (!addr_fog) return 0;
+  addr_d2game=get_dll_addr("D2GAME.DLL"); if (!addr_d2game) return 0;
+  addr_d2launch=get_dll_addr("D2LAUNCH.DLL");if (!addr_d2launch) return 0;
+  addr_d2gdi=get_dll_addr("D2GDI.DLL"); if (!addr_d2gdi) return 0;
+  addr_d2sound=get_dll_addr("D2SOUND.DLL");if (!addr_d2sound) return 0;
 	if (load_dll_error) return 0;
 	#define INIT_D2PTR_ADDR
 	#include "d2ptrs.h"
 	#undef INIT_D2PTR_ADDR
+  addr_d2multi=GetModuleHandle("D2MULTI.DLL");
+  addr_d2mcpclient=GetModuleHandle("D2MCPCLIENT.DLL");
 	return 1;
 }
 int init_d2_ptrs2() {
-  HMODULE addr_storm=get_dll_addr("STORM.DLL");if (!addr_storm) return 0;
-  HMODULE addr_d2client=get_dll_addr("D2CLIENT.DLL"); if (!addr_d2client) return 0;
-  HMODULE addr_d2common=get_dll_addr("D2COMMON.DLL");if (!addr_d2common) return 0;
-  HMODULE addr_d2gfx=get_dll_addr("D2GFX.DLL"); if (!addr_d2gfx) return 0;
-  HMODULE addr_d2win=get_dll_addr("D2WIN.DLL");if (!addr_d2win) return 0;
-  HMODULE addr_d2lang=get_dll_addr("D2LANG.DLL"); if (!addr_d2lang) return 0;
-  HMODULE addr_d2cmp=get_dll_addr("D2CMP.DLL"); if (!addr_d2cmp) return 0;
-  HMODULE addr_bnclient=get_dll_addr("BNCLIENT.DLL"); if (!addr_bnclient) return 0;
-  HMODULE addr_d2net=get_dll_addr("D2NET.DLL"); if (!addr_d2net) return 0;
-  HMODULE addr_fog=get_dll_addr("FOG.DLL"); if (!addr_fog) return 0;
-  HMODULE addr_d2game=get_dll_addr("D2GAME.DLL"); if (!addr_d2game) return 0;
-  HMODULE addr_d2launch=get_dll_addr("D2LAUNCH.DLL");if (!addr_d2launch) return 0;
-  HMODULE addr_d2gdi=get_dll_addr("D2GDI.DLL"); if (!addr_d2gdi) return 0;
-  HMODULE addr_d2sound=get_dll_addr("D2SOUND.DLL");if (!addr_d2sound) return 0;
-  HMODULE addr_d2multi=get_dll_addr("D2MULTI.DLL");if (!addr_d2multi) return 0;
-  HMODULE addr_d2mcpclient=get_dll_addr("D2MCPCLIENT.DLL");if (!addr_d2mcpclient) return 0;
+	if (!addr_d2multi) {addr_d2multi=get_dll_addr("D2MULTI.DLL");if (!addr_d2multi) return 0;}
+  if (!addr_d2mcpclient) {addr_d2mcpclient=get_dll_addr("D2MCPCLIENT.DLL");if (!addr_d2mcpclient) return 0;}
 	if (load_dll_error) return 0;
 	#define INIT_D2PTR_ADDR
 	#include "d2ptrs2.h"
@@ -523,7 +501,7 @@ int init_d2_ptrs2() {
 	return 1;
 }
 static int fInstallPatch2=0;
-void InstallPatchAfterLoad(){
+static void InstallPatchAfterLoad() {
 	if (!fInstallPatch2 ){
 		//RelocD2Ptrs2();
 		init_d2_ptrs2();

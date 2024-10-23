@@ -43,7 +43,7 @@ ShowValuableItem: 30000 //显示卖价超过此值的物品
 Default Game Name:     "pt1"               //设置默认游戏名,注意引号必须有
 Default Game Password: ""                  //设置默认游戏密码
 Default Game Description: ""             //设置默认游戏描述
-Skip Quest Message:             0                   //跳过NPC任务提示 0 不跳过 非0跳过速度
+Skip Quest Message: 6  //跳过NPC任务提示 0 不跳过 非0跳过速度
 DumpMpqPath: 1
 MinFrameMs: 20 //在城外如果两帧间隔小于这个时跳过绘图
 MinFrameMsInTown: 30 //在城内时如果两帧间隔小于这个时跳过绘图

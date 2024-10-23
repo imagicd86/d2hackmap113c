@@ -6,7 +6,8 @@ int BackToTown();
 int QuickNextGame(int addnum);
 void SaveGameName();
 int QuickExitGame();
-int fCanExitGame=0,fBackToTown=0,nTownportalAlertNums=-1;
+int fCanExitGame=0,dwBackToTownTimeout=0,nTownportalAlertNums=-1;
+static int fCastedTownPortal=0,fEnterPortal=0;
 int fAutoNextGameName=0,fAutoNextGamePassword=0,fAutoNextGameDescription=0;
 static int takeWPtoTownDis=6;
 wchar_t	wszGameName[32]={0};
@@ -40,7 +41,6 @@ void quick_NewGame() {
 void quick_EndGame() {
 	fCanExitGame = FALSE;
 }
-static int lastSkill=-1;
 int skillCount(int skillid){
 	if (PLAYER->pSkill){
 		Skill *pSkill = PLAYER->pSkill->pFirstSkill;
@@ -55,17 +55,27 @@ int skillCount(int skillid){
 }
 
 int takeWaypointToTown(int maxdis);
+static int lastSkill=-1;
 int BackToTown() {
-	if (fPlayerInTown) return 0;
+	if (fPlayerInTown) {dwBackToTownTimeout=0;return 0;}
 	if (takeWPtoTownDis&&takeWaypointToTown(takeWPtoTownDis)) return 0;
-	fBackToTown = TRUE;
-	lastSkill=PLAYER->pSkill->pRightSkill->pSkillInfo->wSkillId;
-	switchRightSkill(skillCount(219)>0?0xDB:0xDC);//use scroll first
-	BYTE rightSkill[5] = {0x0C};
-	*(short *)&rightSkill[1] = PLAYER->pMonPath->wTargetX;
-	*(short *)&rightSkill[3] = PLAYER->pMonPath->wTargetY;
-	SendPacket(rightSkill,sizeof(rightSkill));
+	dwBackToTownTimeout=dwCurMs+1000;fCastedTownPortal=0;fEnterPortal=0;
+	lastSkill=dwRightSkill;
+	switchRightSkill(skillCount(219)>0?219:220);//use scroll first
 	return 0;
+}
+void quickLoop() {
+	if (fPlayerInTown||dwCurMs>dwBackToTownTimeout) {dwBackToTownTimeout=0;return;}
+	if (!fCastedTownPortal) {
+		if (!fCanUseRightSkill) return;
+		if (PLAYER->dwMode==PlayerMode_Attacking1||PLAYER->dwMode==PlayerMode_Attacking2
+			||PLAYER->dwMode==PlayerMode_Cast) return;
+		BYTE rightSkill[5] = {0x0C};
+		*(short *)&rightSkill[1] = PLAYER->pMonPath->wTargetX;
+		*(short *)&rightSkill[3] = PLAYER->pMonPath->wTargetY;
+		SendPacket(rightSkill,sizeof(rightSkill));
+		fCastedTownPortal=1;fEnterPortal=0;
+	}
 }
 
 extern int dwTeamMemberCount;
@@ -76,18 +86,17 @@ void __fastcall AutoBackToTown(BYTE *aPacket) {
 			aPacket[1],aPacket[2],*(int *)(aPacket+3));
 	}
 	*/
-	if( aPacket[0]==0x60 && aPacket[1] == 0x00 ) //00限定只能走通向城里的传送门
-	{
-		if ( fBackToTown ){
-			fBackToTown = FALSE;
+	if (aPacket[0]==0x60&&aPacket[1]==0x00) {//00限定只能走通向城里的传送门
+		if (dwBackToTownTimeout&&!fEnterPortal) {
+			fEnterPortal=1;
 			int id=*(int*)&aPacket[3];// portal ID
 			BYTE castMove[9] = {0x13};
 			*(int*)&castMove[1] = 2;
 			*(int*)&castMove[5] = id; 
 			if (fWinActive&&dwTeamMemberCount) leader_click_object(UNITNO_OBJECT,id);
 			SendPacket(castMove,sizeof(castMove));
+			if (lastSkill>=-1) {switchRightSkill(lastSkill);lastSkill=-1;}
 		}
-
 		if( nTownportalAlertNums!= (DWORD)-1 ){
 			int srollcount = skillCount(220);
 			if ( srollcount<= nTownportalAlertNums ){
@@ -96,14 +105,6 @@ void __fastcall AutoBackToTown(BYTE *aPacket) {
 				d2client_ShowGameMessage(temp, 8);
 			}
 		}
-
-		/*if (lastSkill != -1) {
-			BYTE castTP1[9] = {0x3C};
-			*(DWORD*)&castTP1[1] = lastSkill;
-			*(DWORD*)&castTP1[5] = 0xFFFFFFFF;
-			SendPacket(castTP1,sizeof(castTP1));
-		}
-		*/
 	}
 }
 

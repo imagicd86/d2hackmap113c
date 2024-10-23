@@ -1,0 +1,525 @@
+本文件列举游戏运行时的循环调用结构,文件末尾的代码是最顶层的代码
+---------------
+6FAC3CE0 - 8B 4C 24 04           - mov ecx,[esp+04]
+...
+6FAC3E7D - E8 4693FFFF           - call 6FABD1C8 { ->->6FA87C80 D2gfx.Ordinal10076 } draw one piece of ground 9 args
+...
+6FAC3F30 - C2 1800               - ret 0018 { 24 }
+
+---------------
+draw ground
+6FAC4050 - 83 EC 30              - sub esp,30 { 48 }
+...
+6FAC428B - E8 50FAFFFF           - call 6FAC3CE0
+...
+6FAC43C1 - C2 0400               - ret 0004 { 4 }
+------------------------------
+6FB16620 - 85 F6                 - test esi,esi
+6FB16622 - 57                    - push edi
+6FB16623 - 74 35                 - je 6FB1665A
+6FB16625 - E8 168D4FA0           - call d2hackmap.InfravisionPatch_ASM
+...
+6FB166B2 - C3                    - ret 
+
+---------------
+6FB166D0 - 83 EC 14              - sub esp,14 { 20 }
+...
+6FB16780 - E8 9BFEFFFF           - call 6FB16620
+...
+6FB1694A - C2 0400               - ret 0004 { 4 }
+
+---------------
+6FB4EE90 - 8B 4C 24 04           - mov ecx,[esp+04]
+...
+6FB4F1B7 - E8 1475FCFF           - call 6FB166D0
+
+
+---------------
+6FB3B110 - 83 EC 08              - sub esp,08 { 8 }
+...
+6FB3B235 - E8 168EF8FF           - call 6FAC4050 <--- draw ground
+...
+6FB3B27D - E8 EE3F0100           - call 6FB4F270 <--- draw shadows
+6FB3B282 - 57                    - push edi
+6FB3B283 - E8 083C0100           - call 6FB4EE90 <--- draw units
+...
+6FB3B2D1 - 83 C4 08              - add esp,08 { 8 }
+6FB3B2D4 - C3                    - ret 
+-------------------------------------------------------------------------------
+GetGlobalBeltRecord
+6fd632a0 D2Common.dll/Ordinal10991 160
+int belt_record_index,int inventory_arrange_mode,BeltRecord* out_belt_record
+6FD632A0 - 8B 44 24 04           - mov eax,[esp+04] //index=2
+...
+6FD632F5 - C2 0C00               - ret 000C { 12 }
+
+----------------
+ret to 6FAD92BC 
+6FAD8DC0 - 81 EC 50020000        - sub esp,00000250 { 592 }
+...
+6FAD8F2A - E8 F33FFEFF           - call 6FABCF22 { ->->6FD632A0 }
+...
+
+----------------
+draw bottom controls
+6FAD7290 - 83 EC 48              - sub esp,48 { 72 }
+...
+6FAD7459 - E8 385CFEFF           - call 6FABD096 { ->->6FA8B080 D2gfx.Ordinal10041} <---draw left orb
+...
+6FAD7536 - E8 5B5BFEFF           - call 6FABD096 { ->->6FA8B080 D2gfx.Ordinal10041} //draw right orb
+...
+6FAD7540 - C3                    - ret 
+
+-------
+draw HP and Mana text
+6FAD7590 - 81 EC 28030000        - sub esp,00000328 { 808 }
+...
+6FAD76B5 - E8 96B853A0           - call d2hackmap.ShowLifePatch_ASM
+...
+6FAD7703 - E8 765CFEFF           - call 6FABD37E { ->->D2Win.Ordinal10150 } //display HP text
+...
+6FAD7767 - E8 04B853A0           - call d2hackmap.ShowManaPatch_ASM
+...
+6FAD77C2 - E8 B75BFEFF           - call 6FABD37E { ->->D2Win.Ordinal10150 } //display mana text
+...
+6FAD77D1 - C3                    - ret 
+-------
+fill left orb
+6FAD7BD0 - 83 EC 48              - sub esp,48 { 72 }
+...
+6FAD7D18 - E8 9954FEFF           - call 6FABD1B6 { ->->D2gfx.Ordinal10074 } <--- fill left orb 6 args
+...
+6FAD7D45 - E8 4C53FEFF           - call 6FABD096 { ->->D2gfx.Ordinal10041 } //draw left orb circle
+...
+6FAD7D50 - C3                    - ret 
+
+-------
+fill right orb
+6FAD7A90 - 83 EC 48              - sub esp,48 { 72 }
+...
+6FAD7B8D - E8 2456FEFF           - call 6FABD1B6 { ->->D2gfx.Ordinal10074 } <--- fill right orb
+...
+6FAD7BBE - E8 D354FEFF           - call 6FABD096 { ->->D2gfx.Ordinal10041 } //draw right orb circle
+...
+6FAD7BC9 - C3                    - ret 
+
+-------
+draw left right skill button
+6FAD8CE0 - 56                    - push esi
+...
+6FAD8D49 - E8 72FEFFFF           - call 6FAD8BC0 //draw left skill button
+...
+6FAD8DB3 - E8 08FEFFFF           - call 6FAD8BC0 //draw right skill button
+...
+6FAD8DBA - C3                    - ret 
+----------------
+D2DrawClient
+6FAD9250 - 53                    - push ebx
+...
+6FAD928F - E8 3CDEFFFF           - call 6FAD70D0
+6FAD9294 - E8 F7DFFFFF           - call 6FAD7290 <- draw bottom contorls
+6FAD9299 - E8 32E9FFFF           - call 6FAD7BD0 <- fill left orb
+6FAD929E - E8 EDE7FFFF           - call 6FAD7A90 <- fill right orb
+6FAD92A3 - E8 C8D6FFFF           - call 6FAD6970
+6FAD92A8 - E8 73F0FFFF           - call 6FAD8320
+6FAD92AD - E8 FEE5FFFF           - call 6FAD78B0
+6FAD92B2 - E8 C9D5FFFF           - call 6FAD6880
+6FAD92B7 - E8 04FBFFFF           - call 6FAD8DC0 <--- belt stuff
+6FAD92BC - E8 1FFAFFFF           - call 6FAD8CE0 <- draw left right skill button
+6FAD92C1 - E8 6A81D299           - call 09801430
+... 
+6FAD92F7 - E9 B4D4FFFF           - jmp 6FAD67B0
+6FAD67B0 - A1 48BCB86F           - mov eax,[6FB8BC48] { (900) }
+6FAD67B5 - 8B 0D 28B8BC6F        - mov ecx,[6FBCB828] { (9) }
+6FAD6814 - C3                    - ret 
+
+----------------
+d2hackmap.DrawClientPatch_ASM - FF 15 581F0510        - call dword ptr [d2hackmap.D2DrawClient] { ->6FAD9250 }
+d2hackmap.DrawClientPatch_ASM+6- 53                    - push ebx
+d2hackmap.DrawClientPatch_ASM+7- E8 74FEFFFF           - call d2hackmap.DrawClientPatch
+d2hackmap.DrawClientPatch_ASM+C- 5B                    - pop ebx
+d2hackmap.DrawClientPatch_ASM+D- C3                    - ret 
+
+----------------
+6FB53840 - 83 EC 68              - sub esp,68 { 104 }
+...
+6FB538CA - E8 C797F6FF           - call 6FABD096 { ->->6FA8B080 D2gfx.Ordinal10041D rawCellFile} //draw drop gold background image
+...
+6FB53A14 - C3                    - ret 
+---------------- draw pet head
+6FB0B530 - 83 EC 40              - sub esp,40 { 64 }
+...
+6FB0B582 - E8 C97550A0           - call d2hackmap.DrawPetHeadPath_ASM
+...
+6FB0B593 - C2 0800               - ret 0008 { 8 }
+----------------
+6FB0B930 - 83 EC 48              - sub esp,48 { 72 }
+...
+6FB0B9AB - E8 80FBFFFF           - call 6FB0B530
+...
+6FB0BA84 - C2 0C00               - ret 000C { 12 }
+---------------- ebx=type 4:skeleton 5:mage 6:revive
+6FB0B760 - 83 EC 50              - sub esp,50 { 80 }
+...
+6FB0B81F - 52                    - push edx //x
+6FB0B820 - 57                    - push edi //count
+6FB0B821 - E8 AAF5FFFF           - call 6FB0ADD0 //draw skeleton count
+...
+6FB0B833 - E8 D8F6FFFF           - call 6FB0AF10 //draw skeleton name
+...
+6FB0B86B - E8 2618FBFF           - call 6FABD096 { ->->6FA8B080 D2gfx.Ordinal10041 } //draw skeleton image
+...
+6FB0B884 - C2 0C00               - ret 000C { 12 }
+---------------- draw all heads
+6FB0C7F0 - 81 EC 10020000        - sub esp,00000210 { 528 }
+...
+6FB0C9A7 - E8 84EFFFFF           - call 6FB0B930 //draw merc head
+...
+6FB0CA19 - E8 42EDFFFF           - call 6FB0B760 //draw skeleton head | mage head
+...
+6FB0CBB9 - C3                    - ret 
+----------------
+6FB12680 - A1 B8C3BC6F           - mov eax,[6FBCC3B8 d2client_DrlgAct] { (099A2D00) }
+...
+6FB126A3 - E8 98E5FFFF           - call 6FB10C40 //draw minimap
+6FB126A8 - E8 63FDFFFF           - call 6FB12410 //draw NPC names
+...
+6FB126FE - E9 AD1350A0           - jmp d2hackmap.DrawGameInfoPatch
+6FB12703 - C3                    - ret 
+----------------
+draw controls
+6FB739E0 - 51                    - push ecx
+...
+6FB73A05 - E8 06274BA0           - call d2hackmap.SetScreenShiftPatch_ASM (resolution.cpp)
+...
+6FB73A8B - 39 1D A8ADBA6F        - cmp [6FBAADA8 d2client_AutomapOn],ebx { (1) }
+6FB73A91 - 74 0E                 - je 6FB73AA1
+6FB73A93 - 83 3D 14C4BC6F 03     - cmp dword ptr [6FBCC414 d2client_ScreenBlocked],03 { (0),3 }
+6FB73A9A - 74 05                 - je 6FB73AA1
+6FB73A9C - E8 DFEBF9FF           - call 6FB12680 //draw minimap
+6FB73AA1 - E8 2AB6FFFF           - call 6FB6F0D0
+...
+6FB73AAB - 39 1D CCADBA6F        - cmp [6FBAADCC],ebx { (1) }
+6FB73AB1 - 74 05                 - je 6FB73AB8
+6FB73AB3 - E8 388DF9FF           - call 6FB0C7F0 //draw all heads
+...
+6FB73B0F - 39 1D F4ADBA6F        - cmp [6FBAADF4],ebx { (0) }
+6FB73B15 - 74 05                 - je 6FB73B1C
+6FB73B17 - E8 2459FDFF           - call 6FB49440 //draw inventory
+...
+6FB73B5B - 8B 35 60ADBA6F        - mov esi,[6FBAAD60] { (0E0A1000) }
+6FB73B61 - 3B F3                 - cmp esi,ebx
+6FB73B63 - 74 05                 - je 6FB73B6A
+6FB73B65 - E8 D6FCFDFF           - call 6FB53840 //draw drop gold window
+6FB73B6A - 39 1D C0ADBA6F        - cmp [6FBAADC0],ebx { (0) }
+...
+6FB73B96 - E8 55E849A0           - call 6FAD9250 //draw bottom controls <- d2hackmap.DrawClientPatch_ASM(ScreenHook.cpp)
+...
+6FB73C01 - E8 8A39F6FF           - call 6FAD7590 //draw HP and Mana text
+...
+6FB73D4E - E8 BD134BA0           - call d2hackmap.PermShowItemsPatch1_ASM (PermShowItem.cpp)
+...
+6FB73D71 - E8 3A46F8FF           - call 6FAF83B0 //draw NPC interact menu
+...
+6FB73D91 - E8 1A034AA0           - call d2hackmap.DrawHoverPatch_ASM (ItemExtInfo.cpp)
+...
+6FB73DB7 - C2 0400               - ret 0004 { 4 }
+
+----------------
+6FAF4230 - E8 BB6651A0           - call d2hackmap.GameLoopPatch_ASM (GameMainLoop.cpp) <---------------------
+6FAF4235 - 90                    - nop 
+6FAF4236 - 90                    - nop 
+6FAF4237 - E8 B4D20700           - call 6FB714F0
+6FAF423C - E8 618EFCFF           - call 6FABD0A2 { ->->D2gfx.Ordinal10043 } //return 1 if skip all paintings
+6FAF4241 - 85 C0                 - test eax,eax
+6FAF4243 - 0F85 75010000         - jne 6FAF43BE
+6FAF4249 - A1 C4C3BC6F           - mov eax,[6FBCC3C4] { (0B1DE7DC) }
+6FAF424E - 53                    - push ebx
+6FAF424F - 8B 58 08              - mov ebx,[eax+08]
+6FAF4252 - 55                    - push ebp
+6FAF4253 - 8B 68 0C              - mov ebp,[eax+0C]
+6FAF4256 - 56                    - push esi
+6FAF4257 - 8B 35 FCBBBC6F        - mov esi,[6FBCBBFC] { (0ADE2000) }
+6FAF425D - 57                    - push edi
+6FAF425E - 8B 78 04              - mov edi,[eax+04]
+6FAF4261 - 8B 40 10              - mov eax,[eax+10]
+6FAF4264 - 56                    - push esi
+6FAF4265 - 89 44 24 30           - mov [esp+30],eax
+6FAF4269 - E8 647FFCFF           - call 6FABC1D2 { ->->D2Common.Ordinal10651 }
+6FAF426E - 8B C8                 - mov ecx,eax
+6FAF4270 - 8B C5                 - mov eax,ebp
+6FAF4272 - 2B C7                 - sub eax,edi
+6FAF4274 - 99                    - cdq 
+6FAF4275 - 2B C2                 - sub eax,edx
+6FAF4277 - D1 F8                 - sar eax,1
+6FAF4279 - 2B C8                 - sub ecx,eax
+6FAF427B - 56                    - push esi
+6FAF427C - 89 4C 24 18           - mov [esp+18],ecx
+6FAF4280 - E8 717FFCFF           - call 6FABC1F6 { ->->D2Common.Ordinal11142 }
+6FAF4285 - 8B C8                 - mov ecx,eax
+6FAF4287 - 8B 44 24 2C           - mov eax,[esp+2C]
+6FAF428B - 2B C3                 - sub eax,ebx
+6FAF428D - 99                    - cdq 
+6FAF428E - 2B C2                 - sub eax,edx
+6FAF4290 - D1 F8                 - sar eax,1
+6FAF4292 - 2B C8                 - sub ecx,eax
+6FAF4294 - 8D 54 24 18           - lea edx,[esp+18]
+6FAF4298 - 52                    - push edx <--- screenScrollY
+6FAF4299 - 8D 44 24 18           - lea eax,[esp+18]
+6FAF429D - 50                    - push eax <--- screenScrollX
+6FAF429E - 89 4C 24 20           - mov [esp+20],ecx
+6FAF42A2 - E8 39B251A0           - call 1000F4E0 d2hackmap.ShakeScreenPatch <------------------------
+6FAF42A7 - A1 609FBA6F           - mov eax,[6FBA9F60] { (18960) }
+6FAF42AC - 83 F8 FF              - cmp eax,-01 { 255 }
+6FAF42AF - 8B 4C 24 14           - mov ecx,[esp+14]
+6FAF42B3 - 8B 54 24 18           - mov edx,[esp+18]
+6FAF42B7 - 8B 35 5C9FBA6F        - mov esi,[6FBA9F5C] { (91536) }
+6FAF42BD - 75 05                 - jne 6FAF42C4
+6FAF42BF - 83 FE FF              - cmp esi,-01 { 255 }
+6FAF42C2 - 74 13                 - je 6FAF42D7
+6FAF42C4 - 8B F9                 - mov edi,ecx
+6FAF42C6 - 2B F8                 - sub edi,eax
+6FAF42C8 - 8B C2                 - mov eax,edx
+6FAF42CA - 2B C6                 - sub eax,esi
+6FAF42CC - 89 3D 08C4BC6F        - mov [6FBCC408],edi { (0) }
+6FAF42D2 - A3 0CC4BC6F           - mov [6FBCC40C],eax { (0) }
+6FAF42D7 - 8B 35 C4C3BC6F        - mov esi,[6FBCC3C4] { (0B1DE7DC) }
+6FAF42DD - 39 4E 24              - cmp [esi+24],ecx
+6FAF42E0 - 89 0D 609FBA6F        - mov [6FBA9F60],ecx { (18960) }
+6FAF42E6 - 89 15 5C9FBA6F        - mov [6FBA9F5C],edx { (91536) }
+6FAF42EC - 75 05                 - jne 6FAF42F3
+6FAF42EE - 39 56 28              - cmp [esi+28],edx
+6FAF42F1 - 74 0D                 - je 6FAF4300
+6FAF42F3 - 8B 06                 - mov eax,[esi]
+6FAF42F5 - 83 C8 01              - or eax,01 { 1 }
+6FAF42F8 - 89 4E 24              - mov [esi+24],ecx
+6FAF42FB - 89 56 28              - mov [esi+28],edx
+6FAF42FE - 89 06                 - mov [esi],eax
+6FAF4300 - 6A 00                 - push 00 { 0 }
+6FAF4302 - E8 B96D0400           - call 6FB3B0C0
+6FAF4307 - E8 34D00300           - call 6FB31340
+6FAF430C - 8D 4C 24 11           - lea ecx,[esp+11]
+6FAF4310 - 51                    - push ecx
+6FAF4311 - 8B 0D B8C3BC6F        - mov ecx,[6FBCC3B8] { (0ADF4980) }
+6FAF4317 - 8D 54 24 16           - lea edx,[esp+16]
+6FAF431B - 52                    - push edx
+6FAF431C - 8D 44 24 1B           - lea eax,[esp+1B]
+6FAF4320 - 50                    - push eax
+6FAF4321 - 51                    - push ecx
+6FAF4322 - E8 8F82FCFF           - call 6FABC5B6 { ->->D2Common.Ordinal10189 }
+6FAF4327 - 0FB6 54 24 11         - movzx edx,byte ptr [esp+11]
+6FAF432C - 0FB6 44 24 12         - movzx eax,byte ptr [esp+12]
+6FAF4331 - 0FB6 4C 24 13         - movzx ecx,byte ptr [esp+13]
+6FAF4336 - 52                    - push edx
+6FAF4337 - 50                    - push eax
+6FAF4338 - 51                    - push ecx
+6FAF4339 - E8 548EFCFF           - call 6FABD192 { ->->D2gfx.Ordinal10038 } //empty function 3 args
+6FAF433E - 6A 00                 - push 00 { 0 }
+6FAF4340 - 6A 00                 - push 00 { 0 }
+6FAF4342 - 6A 00                 - push 00 { 0 }
+6FAF4344 - E8 97F4FFFF           - call 6FAF37E0
+6FAF4349 - 50                    - push eax //1
+//screen buf address is *(int *)6F87CAA8 colormap address 6F87C150
+6FAF434A - E8 598DFCFF           - call 6FABD0A8 { ->->D2gfx.Ordinal10085 } //set screen buf to zero inside, 4 args
+6FAF434F - 85 C0                 - test eax,eax
+6FAF4351 - 5F                    - pop edi
+6FAF4352 - 5E                    - pop esi
+6FAF4353 - 5D                    - pop ebp
+6FAF4354 - 5B                    - pop ebx
+6FAF4355 - 74 67                 - je 6FAF43BE
+6FAF4357 - E8 4690FCFF           - call 6FABD3A2 { ->->D2Win.Ordinal10062 }
+6FAF435C - E8 FFB4FFFF           - call 6FAEF860
+6FAF4361 - 83 3D 14C4BC6F 03     - cmp dword ptr [6FBCC414],03 { (3),3 } <--- ScreenBlocked
+6FAF4368 - 74 0A                 - je 6FAF4374
+6FAF436A - A1 C4C3BC6F           - mov eax,[6FBCC3C4] { (0B23782C) }
+6FAF436F - E8 9C6D0400           - call 6FB3B110 call d2hackmap.DrawGroundAndUnitPatch_ASM
+6FAF4374 - 8B 15 C4C3BC6F        - mov edx,[6FBCC3C4] { (0B23782C) }
+6FAF437A - 52                    - push edx
+6FAF437B - E8 60F60700           - call 6FB739E0 call d2hackmap.DrawControlsPatch_ASM <------------------------
+6FAF4380 - E8 8990FCFF           - call 6FABD40E { ->->D2Win.Ordinal10024 }
+6FAF4385 - 8B 44 24 0C           - mov eax,[esp+0C]
+6FAF4389 - 85 C0                 - test eax,eax
+6FAF438B - 75 05                 - jne 6FAF4392
+6FAF438D - E8 FE26FDFF           - call 6FAC6A90
+6FAF4392 - E8 09660100           - call 6FB0A9A0
+6FAF4397 - A1 CC46BA6F           - mov eax,[6FBA46CC] { (0) }
+6FAF439C - 85 C0                 - test eax,eax
+6FAF439E - 74 19                 - je 6FAF43B9
+6FAF43A0 - 6A 00                 - push 00 { 0 }
+6FAF43A2 - E8 E98CFCFF           - call 6FABD090 { ->->D2gfx.Ordinal10021 }
+6FAF43A7 - FF 0D CC46BA6F        - dec [6FBA46CC] { (0) }
+6FAF43AD - 79 0A                 - jns 6FAF43B9
+6FAF43AF - C7 05 CC46BA6F 00000000 - mov [6FBA46CC],00000000 { (0),0 }
+6FAF43B9 - E8 CC8CFCFF           - call 6FABD08A { ->->D2gfx.Ordinal10040 } //put everything to screen, no args
+6FAF43BE - 83 C4 20              - add esp,20 { 32 }
+6FAF43C1 - C3                    - ret 
+
+---------------- process packet
+6FAF3920 - 81 EC 00020000        - sub esp,00000200 { 512 }
+...
+6FAF39A3 - 56                    - push esi <-------------packet len
+6FAF39A4 - 8D 44 24 0C           - lea eax,[esp+0C] <-packet buf
+6FAF39A8 - E8 73940600           - call 6FB5CE20 //d2hackmap.GamePacketReceivedInterceptPatch_ASM
+6FAF39AD - 6A 00                 - push 00 { 0 }
+6FAF39AF - FF D3                 - call ebx
+...
+6FAF39BE - C3                    - ret 
+
+---------------- check screen block
+6FB01D10 - 53                    - push ebx
+...
+6FB01D12 - 8B 35 14C4BC6F        - mov esi,[6FBCC414] { (0) } //ScreenBlocked
+---------------- check screen block
+6FB568E0 - A1 14C4BC6F           - mov eax,[6FBCC414] { (0) } //ScreenBlocked
+---------------- check screen block twice
+6FB01E80 - A1 F8C2BC6F           - mov eax,[6FBCC2F8] { (0) }
+...
+6FB01EA3 - E8 68FEFFFF           - call 6FB01D10 check screen block
+...
+6FB0202B - E8 B0480500           - call 6FB568E0 check screen block
+...
+----------------
+6FAF4B50 - 83 EC 08              - sub esp,08 { 8 }
+...
+6FAF4D2A - E8 F1EBFFFF           - call 6FAF3920 // recv packet?
+...
+6FAF4E2A - E8 51D00000           - call 6FB01E80 //check screen block twice
+...
+6FAF4E6E - FF 15 E497BC6F        - call dword ptr [6FBC97E4] { ->6FAF4230 } //d2hackmap loop,draw unit and controls
+...
+6FAF4F2C - 83 C4 08              - add esp,08 { 8 }
+6FAF4F2F - C2 0400               - ret 0004 { 4 }
+
+--------------- d2client Game looping
+6FAECB00 - 83 EC 1C              - sub esp,1C { 28 }
+6FAECB03 - 55                    - push ebp
+6FAECB04 - 8B 2D C8F0B76F        - mov ebp,[6FB7F0C8] { (77D2772B) USER32.GetMessage}
+6FAECB0A - 56                    - push esi
+6FAECB0B - 57                    - push edi
+6FAECB0C - 33 FF                 - xor edi,edi
+6FAECB0E - BE 01000000           - mov esi,00000001 { 1 } <--- game running
+loopStart:
+6FAECB13 - 6A 00                 - push 00 { 0 } <-removeMsg
+6FAECB15 - 6A 00                 - push 00 { 0 } <-filterMax
+6FAECB17 - 6A 00                 - push 00 { 0 } <-filterMin
+6FAECB19 - 6A 00                 - push 00 { 0 } <-hwnd
+6FAECB1B - 8D 44 24 1C           - lea eax,[esp+1C]
+6FAECB1F - 50                    - push eax <-lpMsg
+6FAECB20 - FF 15 E4F0B76F        - call dword ptr [6FB7F0E4] { ->USER32.PeekMessageA }
+6FAECB26 - 85 C0                 - test eax,eax
+6FAECB28 - 74 46                 - je 6FAECB70 //no message
+6FAECB2A - 6A 00                 - push 00 { 0 } <-filterMax
+6FAECB2C - 6A 00                 - push 00 { 0 } <-filterMin
+6FAECB2E - 6A 00                 - push 00 { 0 } <-hwnd
+6FAECB30 - 8D 4C 24 18           - lea ecx,[esp+18]
+6FAECB34 - 51                    - push ecx <-&msg
+6FAECB35 - FF D5                 - call ebp //GetMessage
+6FAECB37 - 8B F0                 - mov esi,eax
+6FAECB39 - 85 F6                 - test esi,esi
+6FAECB3B - 74 1B                 - je 6FAECB58
+6FAECB3D - A1 A4C0BC6F           - mov eax,[6FBCC0A4] { (1966669) }
+6FAECB42 - 85 C0                 - test eax,eax
+6FAECB44 - 74 12                 - je 6FAECB58
+6FAECB46 - 8D 54 24 0C           - lea edx,[esp+0C]
+6FAECB4A - 52                    - push edx
+6FAECB4B - 50                    - push eax
+6FAECB4C - E8 6305FDFF           - call 6FABD0B4 { ->->D2gfx.Ordinal10048 }
+6FAECB51 - 50                    - push eax
+6FAECB52 - FF 15 D4F0B76F        - call dword ptr [6FB7F0D4] { ->USER32.TranslateAccelerator }
+6FAECB58 - 8D 44 24 0C           - lea eax,[esp+0C]
+6FAECB5C - 50                    - push eax
+6FAECB5D - FF 15 D0F0B76F        - call dword ptr [6FB7F0D0] { ->USER32.TranslateMessage }
+6FAECB63 - 8D 4C 24 0C           - lea ecx,[esp+0C]
+6FAECB67 - 51                    - push ecx
+6FAECB68 - FF 15 DCF0B76F        - call dword ptr [6FB7F0DC] { ->USER32.DispatchMessageA } //send packet
+6FAECB6E - EB 2C                 - jmp 6FAECB9C	//if (esi) goto loopStart;
+no message:
+6FAECB70 - 85 DB                 - test ebx,ebx
+6FAECB72 - 74 08                 - je 6FAECB7C
+6FAECB74 - 57                    - push edi
+6FAECB75 - FF D3                 - call ebx <-------------------------- call game loop 6FAF4B50
+6FAECB77 - 47                    - inc edi
+6FAECB78 - 85 C0                 - test eax,eax
+6FAECB7A - 75 34                 - jne 6FAECBB0
+6FAECB7C - A1 604ABA6F           - mov eax,[6FBA4A60] { (0) }
+6FAECB81 - 85 C0                 - test eax,eax
+6FAECB83 - 75 17                 - jne 6FAECB9C	//if (esi) goto loopStart;
+6FAECB85 - A1 94C3BC6F           - mov eax,[6FBCC394] { (0) }
+6FAECB8A - 83 F8 06              - cmp eax,06 { 6 }
+6FAECB8D - 74 0D                 - je 6FAECB9C	//if (esi) goto loopStart;
+6FAECB8F - 83 F8 08              - cmp eax,08 { 8 }
+6FAECB92 - 74 08                 - je 6FAECB9C	//if (esi) goto loopStart;
+6FAECB94 - 6A 0A                 - push 0A { 10 }
+6FAECB96 - FF 15 A0EFB76F        - call dword ptr [6FB7EFA0] { ->kernel32.Sleep } <---- only called in background
+6FAECB9C - 85 F6                 - test esi,esi
+6FAECB9E - 0F85 6FFFFFFF         - jne 6FAECB13 //loopStart
+loopEnd
+6FAECBA4 - 5F                    - pop edi
+6FAECBA5 - 5E                    - pop esi
+6FAECBA6 - B8 01000000           - mov eax,00000001 { 1 }
+6FAECBAB - 5D                    - pop ebp
+6FAECBAC - 83 C4 1C              - add esp,1C { 28 }
+6FAECBAF - C3                    - ret 
+6FAECBB0 - 85 F6                 - test esi,esi
+6FAECBB2 - 75 05                 - jne 6FAECBB9
+6FAECBB4 - B8 01000000           - mov eax,00000001 { 1 }
+6FAECBB9 - 5F                    - pop edi
+6FAECBBA - 5E                    - pop esi
+6FAECBBB - 5D                    - pop ebp
+6FAECBBC - 83 C4 1C              - add esp,1C { 28 }
+6FAECBBF - C3                    - ret 
+6FAECBC0 - 56                    - push esi
+6FAECBC1 - 8B 74 24 08           - mov esi,[esp+08]
+6FAECBC5 - 8B 06                 - mov eax,[esi]
+6FAECBC7 - 6A 00                 - push 00 { 0 }
+6FAECBC9 - 6A 00                 - push 00 { 0 }
+6FAECBCB - 6A 10                 - push 10 { 16 }
+6FAECBCD - 50                    - push eax
+6FAECBCE - FF 15 18F1B76F        - call dword ptr [6FB7F118] { ->77D2F3C2 }
+6FAECBD4 - C7 46 18 01000000     - mov [esi+18],00000001 { 1 }
+6FAECBDB - C7 46 1C 00000000     - mov [esi+1C],00000000 { 0 }
+6FAECBE2 - 5E                    - pop esi
+6FAECBE3 - C2 0400               - ret 0004 { 4 }
+
+--------------------------- d2client RunGame
+6FAF4F40 - A1 D0C3BC6F           - mov eax,[6FBCC3D0] { (0) }
+...
+6FAF50A2 - E8 29F3FFFF           - call 6FAF43D0 //adjust window size
+...
+6FAF511C - 74 05                 - je 6FAF5123
+6FAF511E - 83 F8 08              - cmp eax,08 { 8 }
+6FAF5121 - 75 20                 - jne 6FAF5143
+6FAF5123 - 68 C897BC6F           - push 6FBC97C8 { (0) }
+6FAF5128 - FF 15 BCEFB76F        - call dword ptr [6FB7EFBC] { ->ntdll.RtlEnterCriticalSection }
+6FAF512E - 68 C897BC6F           - push 6FBC97C8 { (0) }
+6FAF5133 - C7 05 D8C3BC6F 01000000 - mov [6FBCC3D8],00000001 { (0),1 }
+6FAF513D - FF 15 B8EFB76F        - call dword ptr [6FB7EFB8] { ->ntdll.RtlLeaveCriticalSection }
+6FAF5143 - BB 504BAF6F           - mov ebx,6FAF4B50
+6FAF5148 - E8 B379FFFF           - call 6FAECB00 //Game Looping
+6FAF514D - FF 15 5CEFB76F        - call dword ptr [6FB7EF5C] { ->kernel32.GetTickCount }
+6FAF5153 - E8 C85A51A0           - call d2hackmap.GameEndPatch_ASM
+6FAF5158 - E8 7381FCFF           - call 6FABD2D0 { ->->D2sound.Ordinal10023 }
+6FAF515D - E8 AE7F0100           - call 6FB0D110
+6FAF5162 - E8 39340400           - call 6FB385A0
+6FAF5167 - A1 D0C3BC6F           - mov eax,[6FBCC3D0] { (0) }
+...
+6FAF54D8 - C3                    - ret 
+
+---------------------------
+6FAC0D17 - B8 03000000           - mov eax,00000003 { 3 }
+6FAC0D1C - A3 5C8CBA6F           - mov [6FBA8C5C],eax { (2) }
+6FAC0D21 - C7 05 9C8CBA6F 01000000 - mov [6FBA8C9C],00000001 { (0),1 }
+6FAC0D2B - EB 03                 - jmp 6FAC0D30
+6FAC0D2D - 8D 49 00              - lea ecx,[ecx+00]
+6FAC0D30 - FF 14 85 608CBA6F     - call dword ptr [eax*4+6FBA8C60]
+//6FBA8C60: 00000000 00000000 2:6FAF4F40(RunGame) 3:6FAF2240 4:6FAF36E0 5:6FB5FE10 6:6FB5FDD0 00000000
+//enter game eax=3->5->2 6FAF2240->6FB5FE10->6FAF4F40
+//exit game eax=6->4	6FB5FDD0->6FAF36E0
+6FAC0D37 - 83 F8 07              - cmp eax,07 { 7 }
+6FAC0D3A - A3 5C8CBA6F           - mov [6FBA8C5C],eax { (2) }
+6FAC0D3F - 7D 3A                 - jnl 6FAC0D7B
+6FAC0D41 - 85 C0                 - test eax,eax
+6FAC0D43 - 7E 3D                 - jle 6FAC0D82
+6FAC0D45 - 83 F8 01              - cmp eax,01 { 1 }
+6FAC0D48 - 75 E6                 - jne 6FAC0D30
+

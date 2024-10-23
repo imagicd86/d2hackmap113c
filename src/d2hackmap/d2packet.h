@@ -240,55 +240,6 @@ Object Type's
 */
 
 /*
-
-void __fastcall GamePacketReceivedIntercept(BYTE* aPacket, DWORD aLength)
-{
-	return;
-}
-//////////////////////////////////////////////////////////////////////
-// GamePacketReceivedSTUB()
-// -------------------------------------------------------------------
-
-// before call orignal code
-// bl = packet number
-// esi = length
-// edi = pointer to packet
-// free register before pushad: eax
-//////////////////////////////////////////////////////////////////////
-void __declspec(naked) GamePacketReceivedInterceptPatch_ASM()
-{
-	__asm {
-		mov eax, esi; // save length
-
-		// original code
-		movzx esi, bl;
-		mov ebp, esi
-		shl ebp, 1
-		add ebp, esi
-		pushad;
-		// Call our clean c function
-		mov edx, eax;
-		mov ecx, edi;
-		call GamePacketReceivedIntercept;
-		// Return to game
-		popad;
-		add dword ptr[esp], 1; 
-		ret;
-	}
-}
-
-
-*/
-
-
-
-
-
-
-
-
-
-/*
 S -> C
 
 Number   Size   Effect:            Usage: 

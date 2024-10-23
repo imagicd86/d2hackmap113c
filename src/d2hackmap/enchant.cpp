@@ -7,6 +7,7 @@
 #define MAX_MONSTERS 4096
 #define NOT_ENCHANTED 0x33333333
 
+int getMonsterOwnerId(int id);
 static int playerEnchantMs[MAX_PLAYERS];
 static int monsterEnchantMs[MAX_MONSTERS];
 static int checkMs,needHelpId;
@@ -80,14 +81,14 @@ player_end:
 		if (dwUnitId==needHelpId) {needHelpId=0;enchant=2;}
 	} else if ( pUnit->dwUnitType==UNITNO_MONSTER ){
 		if (0<=pUnit->dwTxtFileNo&&pUnit->dwTxtFileNo<1024) enchant=dwAutoEnchantMonster[pUnit->dwTxtFileNo];
-		dwUnitId = d2client_GetMonsterOwner(pUnit->dwUnitId);
+		dwUnitId = getMonsterOwnerId(pUnit->dwUnitId);
 		if (dwUnitId == (DWORD)-1) return 0; //not owned by player
 		ms=monsterEnchantMs[pUnit->dwUnitId%MAX_MONSTERS];
 		passed=dwCurMs-ms;
 	}
 	if (!enchant) return 0;
 	if (dwCurMs<ms+3000) return 0; //just enchanted
-	if (pUnit->dwUnitType==UNITNO_MONSTER&&!sameParty(dwPlayerId, dwUnitId )) return 0;
+	if (pUnit->dwUnitType==UNITNO_MONSTER&&!sameParty(dwUnitId)) return 0;
 	if (enchant>1||!d2common_CheckUnitState(pUnit, State_Enchant)) {maxUnit=pUnit;maxMs=NOT_ENCHANTED;return 0;}
 	if (passed>=dwRenewEnchantMs&&passed>maxMs) {maxMs=passed;maxUnit=pUnit;}
 	return 0;
@@ -126,7 +127,7 @@ void AutoEnchantRunLoop() {
 	checkMs=dwCurMs+3000;
 }
 void AutoEnchantPlayerNeedHelp(int id) {
-	if (!sameParty(dwPlayerId, id )) return;
+	if (!sameParty(id)) return;
 	needHelpId=id;fAutoEnchantCheckUnit=1;checkMs=dwCurMs;
 }
 void check3bb() {

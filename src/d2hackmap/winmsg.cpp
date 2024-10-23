@@ -15,8 +15,6 @@ void MoveItem(D2MSG *pMsg );
 int makeRuntimeInfoPath(char *path,int id);
 void follower_cmd(int lParam);
 
-struct AccountInfo {int key;char *name,*pass;struct AccountInfo *next;};
-static AccountInfo *accountInfos=NULL;
 static int need_paint=0;
 static int altDown=0,ctrlDown=0,shiftDown=0;
 static int dwCheckCTAMs=0,checkCTA=0,dwSwapWeaponKey=0;
@@ -27,7 +25,7 @@ static int checkLockMouseMs=0;
 
 int switchSkillStart(int id);
 int switchSkillEnd(int id);
-int inputUserPassword(AccountInfo *pai);
+int isLoginScreen();
 void refreshScreenSaver();
 void refreshMenuScreenSaver();
 int FullScreen();
@@ -95,7 +93,6 @@ void winmsg_addConfigVars() {
 	for (int i=0;i<_ARRAYSIZE(aConfigVars);i++) addConfigVar(&aConfigVars[i]);
 }
 void winmsg_initConfigVars() {
-	accountInfos=NULL;
 	memset(tSwitchWindowKeys ,       0 ,      sizeof(tSwitchWindowKeys) );
 	memset(dwGameControlKeys ,       0 ,      sizeof(dwGameControlKeys) );
 	memset(dwGameSoundKeys ,       0 ,      sizeof(dwGameSoundKeys) );
@@ -171,23 +168,6 @@ void WinMessage_initKeyEvent() {
 			p->funcUp=switchSkillEnd;
 		}
 	}
-}
-void addAccount(int key,char *name,char *pass) {
-	for (AccountInfo *p=accountInfos;p;p=p->next) {
-		if (p->key==key) {
-			p->name=heap_strdup(confHeap,name);
-			p->pass=heap_strdup(confHeap,pass);
-			return;
-		}
-	}
-	AccountInfo *pai=(AccountInfo *)HeapAlloc(confHeap,0,sizeof(AccountInfo));
-	pai->key=key;pai->name=heap_strdup(confHeap,name);pai->pass=heap_strdup(confHeap,pass);
-	pai->next=accountInfos;accountInfos=pai;
-	ToggleVar *ptv=addExtraKey(key);if (!ptv) {LOG("ERROR: too many keys\n");return;}
-	ptv->type=TOGGLEVAR_DOWNPTR;ptv->key=key;
-	ptv->paramPtr=pai;ptv->keyType=1;
-	ptv->func=inputUserPassword;ptv->funcUp=NULL;
-	ptv->desc="Account";
 }
 int IsKeyDown(int keyCode) {return isKeyDown[keyCode&0xFF];}
 int LockMouse() {
@@ -340,20 +320,6 @@ int AttractNPC() {
 	}
 	return 0;
 }
-int isLoginScreen() {
-	if (fInGame) return 0;
-	D2EditBox *focus=(*d2win_pFocusedControl);
-	if (!focus) return 0;
-	D2EditBox *next=focus->pNext2;
-	if (!next) return 0;
-	if (next->pNext2!=focus) return 0;
-	D2EditBox *nameBox,*passBox;
-	if (focus->dwPosY<next->dwPosY) {nameBox=focus;passBox=next;}
-	else {nameBox=next;passBox=focus;}
-	if (nameBox->dwPosY!=342) return 0;
-	if (passBox->dwPosY!=396) return 0;
-	return 1;
-}
 int SwitchWindow(int id) {
 	if (isLoginScreen()) return 0;
 	id++;
@@ -476,27 +442,6 @@ void WinMessageRunLoop() {
 		int ison=*d2client_pAutomapOn;//D2CheckUiStatus(UIVAR_AUTOMAP);
 		if (ison!=on) GameControl(7);
 	}
-}
-static void c2w(char *p,wchar_t *w) {
-	while (1) {*w=(*p)&0xFF;if (!*p) break;w++;p++;}
-}
-int inputUserPassword(AccountInfo *pai) {
-	char *name=pai->name;char *password=pai->pass;
-	if (!name) return -1;if (!password) password="";
-	wchar_t wb[64]={0};
-	D2EditBox *focus=(*d2win_pFocusedControl);
-	if (!focus) return -1;
-	D2EditBox *next=focus->pNext2;
-	if (!next) return -1;
-	if (next->pNext2!=focus) return -1;
-	D2EditBox *nameBox,*passBox;
-	if (focus->dwPosY<next->dwPosY) {nameBox=focus;passBox=next;}
-	else {nameBox=next;passBox=focus;}
-	if (nameBox->dwPosY!=342) return -1;
-	if (passBox->dwPosY!=396) return -1;
-	c2w(password,wb);d2win_SetEditBoxText(passBox,wb);
-	c2w(name,wb);d2win_SetEditBoxText(nameBox,wb);
-	return 0;
 }
 static int __fastcall keyDown(int vk,int winMsg) {
 	if (vk<1||vk>=256) return 0;
@@ -929,18 +874,6 @@ static void clearScreen() {
 	TextOut(hdc, 10, 10, buf,strlen(buf));
 	ReleaseDC(hwnd,hdc);
 }
-int get_cpu_usage(int *ucpu,int *kcpu);
-static void mainMenuClearScreen() {
-	static int calFpsMs=0,dwLoopCount=0,ln=0;
-	dwLoopCount++;
-	dwCurMs=GetTickCount();
-	if (dwCurMs>calFpsMs) {
-		dwLoopFPS=dwLoopCount-ln;ln=dwLoopCount;dwDrawFPS=0;
-		get_cpu_usage(&dwCpuUser,&dwCpuKernel);
-		calFpsMs=dwCurMs+1000;
-	}
-	clearScreen();
-}
 static int shouldSkipAllDrawing() {
 	if (fSkipPainting) {if (need_paint) clearScreen();return 1;}
 	static int lastDrawMs=0;
@@ -965,24 +898,38 @@ skip:
 		ret
 	}
 }
+int get_cpu_usage(int *ucpu,int *kcpu);
+extern int dwAutoLoginMs;
+void autoLogin();
+static void mainMenuLoop() {
+	static int calFpsMs=0,dwLoopCount=0,ln=0;
+	dwLoopCount++;dwCurMs=GetTickCount();
+	if (dwAutoLoginMs&&dwCurMs>dwAutoLoginMs) {dwAutoLoginMs=0;autoLogin();}
+	if (fSkipPaintingMenu&&need_paint) {need_paint=0;clearScreen();}
+}
 //6F8F87E3 - E8 10F0FEFF           - call 6F8E77F8 { ->->6FA888B0 D2gfx.Ordinal10043}
 void __declspec(naked) SkipDrawMenuPatch_ASM() {
 	__asm {
+		pushad
+		call mainMenuLoop
+		popad
 		cmp fSkipPaintingMenu,0
 		jne skip
 		call d2gfx_Ordinal10043
 		ret
 skip:
-		cmp need_paint,0
-		jne menu_clear_screen
 		mov eax,1
 		ret
-menu_clear_screen:
+	}
+}
+void drawMainMenuMessages();
+//6F8F896C - E8 51EEFEFF           - call 6F8E77C2 { ->->6FA8ADD0 d2gfx_flushFramebuf} //put to screen
+void __declspec(naked) MainMenuFlushFramebufPatch_ASM() {
+	__asm {
 		pushad
-		call mainMenuClearScreen
+		call drawMainMenuMessages
 		popad
-		mov eax,1
-		ret
+		jmp d2gfx_flushFramebuf
 	}
 }
 /*
